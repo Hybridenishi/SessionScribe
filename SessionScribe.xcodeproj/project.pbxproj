@@ -1,0 +1,549 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		432EAA63300FEF10009ECBDD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 432EAA4D300FEF0F009ECBDD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 432EAA54300FEF10009ECBDD;
+			remoteInfo = SessionScribe;
+		};
+		432EAA6D300FEF10009ECBDD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 432EAA4D300FEF0F009ECBDD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 432EAA54300FEF10009ECBDD;
+			remoteInfo = SessionScribe;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		432EAA55300FEF10009ECBDD /* SessionScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SessionScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		432EAA62300FEF10009ECBDD /* SessionScribeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SessionScribeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		432EAA6C300FEF10009ECBDD /* SessionScribeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SessionScribeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		432EAA57300FEF10009ECBDD /* SessionScribe */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SessionScribe;
+			sourceTree = "<group>";
+		};
+		432EAA65300FEF10009ECBDD /* SessionScribeTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SessionScribeTests;
+			sourceTree = "<group>";
+		};
+		432EAA6F300FEF10009ECBDD /* SessionScribeUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SessionScribeUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		432EAA52300FEF10009ECBDD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		432EAA5F300FEF10009ECBDD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		432EAA69300FEF10009ECBDD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		432EAA4C300FEF0F009ECBDD = {
+			isa = PBXGroup;
+			children = (
+				432EAA57300FEF10009ECBDD /* SessionScribe */,
+				432EAA65300FEF10009ECBDD /* SessionScribeTests */,
+				432EAA6F300FEF10009ECBDD /* SessionScribeUITests */,
+				432EAA56300FEF10009ECBDD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		432EAA56300FEF10009ECBDD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				432EAA55300FEF10009ECBDD /* SessionScribe.app */,
+				432EAA62300FEF10009ECBDD /* SessionScribeTests.xctest */,
+				432EAA6C300FEF10009ECBDD /* SessionScribeUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		432EAA54300FEF10009ECBDD /* SessionScribe */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 432EAA74300FEF10009ECBDD /* Build configuration list for PBXNativeTarget "SessionScribe" */;
+			buildPhases = (
+				432EAA51300FEF10009ECBDD /* Sources */,
+				432EAA52300FEF10009ECBDD /* Frameworks */,
+				432EAA53300FEF10009ECBDD /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				432EAA57300FEF10009ECBDD /* SessionScribe */,
+			);
+			name = SessionScribe;
+			productName = SessionScribe;
+			productReference = 432EAA55300FEF10009ECBDD /* SessionScribe.app */;
+			productType = "com.apple.product-type.application";
+		};
+		432EAA61300FEF10009ECBDD /* SessionScribeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 432EAA77300FEF10009ECBDD /* Build configuration list for PBXNativeTarget "SessionScribeTests" */;
+			buildPhases = (
+				432EAA5E300FEF10009ECBDD /* Sources */,
+				432EAA5F300FEF10009ECBDD /* Frameworks */,
+				432EAA60300FEF10009ECBDD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				432EAA64300FEF10009ECBDD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				432EAA65300FEF10009ECBDD /* SessionScribeTests */,
+			);
+			name = SessionScribeTests;
+			productName = SessionScribeTests;
+			productReference = 432EAA62300FEF10009ECBDD /* SessionScribeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		432EAA6B300FEF10009ECBDD /* SessionScribeUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 432EAA7A300FEF10009ECBDD /* Build configuration list for PBXNativeTarget "SessionScribeUITests" */;
+			buildPhases = (
+				432EAA68300FEF10009ECBDD /* Sources */,
+				432EAA69300FEF10009ECBDD /* Frameworks */,
+				432EAA6A300FEF10009ECBDD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				432EAA6E300FEF10009ECBDD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				432EAA6F300FEF10009ECBDD /* SessionScribeUITests */,
+			);
+			name = SessionScribeUITests;
+			productName = SessionScribeUITests;
+			productReference = 432EAA6C300FEF10009ECBDD /* SessionScribeUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		432EAA4D300FEF0F009ECBDD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					432EAA54300FEF10009ECBDD = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					432EAA61300FEF10009ECBDD = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 432EAA54300FEF10009ECBDD;
+					};
+					432EAA6B300FEF10009ECBDD = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 432EAA54300FEF10009ECBDD;
+					};
+				};
+			};
+			buildConfigurationList = 432EAA50300FEF0F009ECBDD /* Build configuration list for PBXProject "SessionScribe" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 432EAA4C300FEF0F009ECBDD;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 432EAA56300FEF10009ECBDD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				432EAA54300FEF10009ECBDD /* SessionScribe */,
+				432EAA61300FEF10009ECBDD /* SessionScribeTests */,
+				432EAA6B300FEF10009ECBDD /* SessionScribeUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		432EAA53300FEF10009ECBDD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		432EAA60300FEF10009ECBDD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		432EAA6A300FEF10009ECBDD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		432EAA51300FEF10009ECBDD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		432EAA5E300FEF10009ECBDD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		432EAA68300FEF10009ECBDD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		432EAA64300FEF10009ECBDD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 432EAA54300FEF10009ECBDD /* SessionScribe */;
+			targetProxy = 432EAA63300FEF10009ECBDD /* PBXContainerItemProxy */;
+		};
+		432EAA6E300FEF10009ECBDD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 432EAA54300FEF10009ECBDD /* SessionScribe */;
+			targetProxy = 432EAA6D300FEF10009ECBDD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		432EAA72300FEF10009ECBDD /* Debug configuration for PBXProject "SessionScribe" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		432EAA73300FEF10009ECBDD /* Release configuration for PBXProject "SessionScribe" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		432EAA75300FEF10009ECBDD /* Debug configuration for PBXNativeTarget "SessionScribe" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.natedavis.SessionScribe;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		432EAA76300FEF10009ECBDD /* Release configuration for PBXNativeTarget "SessionScribe" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.natedavis.SessionScribe;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		432EAA78300FEF10009ECBDD /* Debug configuration for PBXNativeTarget "SessionScribeTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.natedavis.SessionScribeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SessionScribe.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SessionScribe";
+			};
+			name = Debug;
+		};
+		432EAA79300FEF10009ECBDD /* Release configuration for PBXNativeTarget "SessionScribeTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.natedavis.SessionScribeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SessionScribe.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SessionScribe";
+			};
+			name = Release;
+		};
+		432EAA7B300FEF10009ECBDD /* Debug configuration for PBXNativeTarget "SessionScribeUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.natedavis.SessionScribeUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = SessionScribe;
+			};
+			name = Debug;
+		};
+		432EAA7C300FEF10009ECBDD /* Release configuration for PBXNativeTarget "SessionScribeUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XR7H58A3T2;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.natedavis.SessionScribeUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = SessionScribe;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		432EAA50300FEF0F009ECBDD /* Build configuration list for PBXProject "SessionScribe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				432EAA72300FEF10009ECBDD /* Debug configuration for PBXProject "SessionScribe" */,
+				432EAA73300FEF10009ECBDD /* Release configuration for PBXProject "SessionScribe" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		432EAA74300FEF10009ECBDD /* Build configuration list for PBXNativeTarget "SessionScribe" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				432EAA75300FEF10009ECBDD /* Debug configuration for PBXNativeTarget "SessionScribe" */,
+				432EAA76300FEF10009ECBDD /* Release configuration for PBXNativeTarget "SessionScribe" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		432EAA77300FEF10009ECBDD /* Build configuration list for PBXNativeTarget "SessionScribeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				432EAA78300FEF10009ECBDD /* Debug configuration for PBXNativeTarget "SessionScribeTests" */,
+				432EAA79300FEF10009ECBDD /* Release configuration for PBXNativeTarget "SessionScribeTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		432EAA7A300FEF10009ECBDD /* Build configuration list for PBXNativeTarget "SessionScribeUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				432EAA7B300FEF10009ECBDD /* Debug configuration for PBXNativeTarget "SessionScribeUITests" */,
+				432EAA7C300FEF10009ECBDD /* Release configuration for PBXNativeTarget "SessionScribeUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 432EAA4D300FEF0F009ECBDD /* Project object */;
+	validationLevel = 1;
+}
