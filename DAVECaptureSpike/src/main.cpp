@@ -2,7 +2,9 @@
 
 #include <atomic>
 #include <charconv>
+#include <chrono>
 #include <csignal>
+#include <cstdlib>
 #include <iostream>
 #include <span>
 #include <stdexcept>
@@ -39,7 +41,7 @@ struct Arguments {
         std::string(arguments[3]) != "--channel-id" || std::string(arguments[5]) != "--output") {
         throw std::invalid_argument(
             "Usage: session-scribe-dave-spike --guild-id <id> --channel-id <id> --output <directory>\n"
-            "Provide the bot token as one line on standard input; it is never accepted as an argument or written to disk.");
+            "Provide the bot token in SESSION_SCRIBE_SPIKE_TOKEN or as one line on standard input; it is never accepted as an argument or written to disk.");
     }
 
     return Arguments {
@@ -50,9 +52,14 @@ struct Arguments {
 }
 
 [[nodiscard]] std::string readToken() {
+    if (const char* environmentToken = std::getenv("SESSION_SCRIBE_SPIKE_TOKEN");
+        environmentToken != nullptr && environmentToken[0] != '\0') {
+        return environmentToken;
+    }
+
     std::string token;
     if (!std::getline(std::cin, token) || token.empty()) {
-        throw std::invalid_argument("A bot token is required on standard input");
+        throw std::invalid_argument("A bot token is required in SESSION_SCRIBE_SPIKE_TOKEN or on standard input");
     }
     return token;
 }
@@ -81,6 +88,9 @@ int main(int argumentCount, char* arguments[]) {
 
         dpp::cluster bot(token, dpp::i_guilds | dpp::i_guild_voice_states);
         std::atomic_bool joinRequested = false;
+        std::atomic_bool voiceReady = false;
+        std::atomic_bool receivedAudio = false;
+        std::atomic<dpp::discord_client*> voiceShard = nullptr;
 
         bot.on_log([&token](const dpp::log_t& event) {
             if (event.severity >= dpp::ll_warning) {
@@ -91,6 +101,8 @@ int main(int argumentCount, char* arguments[]) {
         bot.on_ready([&](const dpp::ready_t& event) {
             if (!joinRequested.exchange(true)) {
                 if (dpp::discord_client* shard = event.from(); shard != nullptr) {
+                    voiceShard.store(shard);
+                    std::cerr << "Gateway ready. Joining the voice channel...\n";
                     shard->connect_voice(configuration.guildID, configuration.channelID, false, false, true);
                 } else {
                     recorder.disconnected("gateway_shard_unavailable");
@@ -100,6 +112,11 @@ int main(int argumentCount, char* arguments[]) {
 
         bot.on_voice_ready([&](const dpp::voice_ready_t&) {
             recorder.connected();
+            if (voiceReady.exchange(true)) {
+                std::cerr << "Voice connection ready again. Recording remains armed.\n";
+            } else {
+                std::cerr << "Voice connection ready. Recording is armed; you can speak now.\n";
+            }
         });
 
         bot.on_voice_client_disconnect([&](const dpp::voice_client_disconnect_t& event) {
@@ -124,17 +141,29 @@ int main(int argumentCount, char* arguments[]) {
                 .rtp = session_scribe::spike::parseRtpHeader(packet),
                 .pcm = event.audio_data,
             });
+
+            if (!receivedAudio.exchange(true)) {
+                std::cerr << "Recording started: receiving audio from Discord user " << id << ".\n";
+            }
         });
 
         std::signal(SIGINT, requestStop);
         std::signal(SIGTERM, requestStop);
         bot.start(dpp::st_return);
 
-        std::cerr << "Capture spike is running. Press Control-C to finalize the evidence tracks.\n";
+        std::cerr << "Capture spike is running. Waiting for the voice connection to be ready.\n";
         while (!stopRequested.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
 
+        if (!receivedAudio.load()) {
+            std::cerr << "No audio frames arrived. Wait for 'Voice connection ready' before speaking.\n";
+        }
+        std::cerr << "Stopping capture: leaving the voice channel and finalizing evidence tracks...\n";
+        if (dpp::discord_client* shard = voiceShard.load(); shard != nullptr) {
+            shard->disconnect_voice(configuration.guildID);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
         bot.shutdown();
         recorder.finalize();
         return 0;

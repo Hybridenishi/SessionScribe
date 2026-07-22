@@ -4,6 +4,8 @@ This is a disposable command-line proof of the Discord receiver boundary. It is 
 
 It uses D++ 10.1.5, which supports DAVE-enabled voice connections and per-user receive callbacks. D++'s public receive callback exposes decoded PCM, so the spike writes per-user `48 kHz`, stereo, signed-16-bit WAV tracks. The output manifest labels those tracks as noncanonical. Do not treat them as the MVP's future preserved Opus archive.
 
+> **Current live-test status:** The DAVE capture gate has not passed. The receiver produced one partial single-user recording, but subsequent join-order tests exposed DAVE decryption warnings or no delivered audio. See [LIVE-TEST-FINDINGS.md](LIVE-TEST-FINDINGS.md) for the dated evidence, current diagnosis, and alternative directions.
+
 ## Build and test
 
 Install the macOS dependencies:
@@ -24,7 +26,31 @@ ctest --test-dir DAVECaptureSpike/build --output-on-failure
 
 Create a dedicated test bot and voice channel. The bot must be visible in the channel and have permission to connect and speak. Enable the required Guilds and Guild Voice States gateway intents in the Discord developer portal.
 
-Run the binary with the bot token supplied only on standard input, not in shell history, process arguments, or files:
+For the easiest local run, copy the ignored template and add the newly generated bot token after the equals sign. Do not quote it, commit it, or paste it into chat:
+
+```sh
+cp DAVECaptureSpike/.env.example DAVECaptureSpike/.env
+chmod 600 DAVECaptureSpike/.env
+```
+
+Load that file only into the current terminal, run the spike, then clear the variable:
+
+```sh
+set -a
+source DAVECaptureSpike/.env
+set +a
+
+DAVECaptureSpike/build/session-scribe-dave-spike \
+  --guild-id <guild-id> \
+  --channel-id <channel-id> \
+  --output DAVECaptureSpike/capture-output/run-001
+
+unset SESSION_SCRIBE_SPIKE_TOKEN
+```
+
+The terminal reports three useful milestones: it is joining voice, `Voice connection ready` (the recorder is armed), and `Recording started` (the first PCM audio frame was received). Start speaking only after the voice-ready message. Control-C asks Discord to leave the channel, then finalizes the evidence tracks.
+
+Alternatively, run the binary with the bot token supplied only on standard input:
 
 ```sh
 read -rs SESSION_SCRIBE_SPIKE_TOKEN
