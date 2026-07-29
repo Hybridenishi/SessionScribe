@@ -9,6 +9,7 @@ This is the plan for the **Review Inbox → Foundry publish** leg of SessionScri
 It is **not** the Discord audio pipeline. `DAVECaptureSpike/LIVE-TEST-FINDINGS.md` and `DAVECaptureSpike/PATCHED-DPP.md` document that Milestone 0 (reliable DAVE audio capture) has not passed, and both files are explicit that the spike must not be integrated into the app until it does. That gate is independent of this plan — the Foundry publish path doesn't need audio, live transcription, or the sidecar spike at all. This plan's "review inbox" is fed by the GM typing or pasting notes, not by transcript extraction. Automated "identify developments requiring note changes" (from the original workflow description) is downstream of working transcription and is out of scope here.
 
 Two things are explicitly deferred, not forgotten:
+
 - **Wiring the DAVE spike into the app.** Blocked on the Milestone 0 gate in `LIVE-TEST-FINDINGS.md`. A candidate fix is written up in `PATCHED-DPP.md` but unconfirmed against a live Discord session — that's the next step on *that* track, and it's separate work.
 - **Testing against Craig-recorded audio** as an interim transcription source while native capture is blocked. That's a transcription-pipeline concern, not a publishing concern — it would feed the same Review Inbox this plan builds, but building the transcription source is not part of this plan.
 
@@ -32,6 +33,7 @@ This gates everything below it. Don't write `FoundryClient` against an assumptio
 The client authenticates with the sidecar's GM `API_KEY` (see `docs/JOURNAL-API.md`'s auth section — this key currently grants full sidecar access, not just journal routes; that's a documented open question in the doc, not something to work around here). `docs/SessionScribe-MVP.md` already states the rule for the (still-hypothetical) Discord bot token — apply the same rule here: **Keychain only, never `UserDefaults`, never in a plist, never logged.**
 
 Add a small `CredentialStore` (or similar) service:
+
 - `save(apiKey: String, sidecarBaseURL: URL) throws`
 - `load() throws -> (apiKey: String, sidecarBaseURL: URL)?`
 - Use `kSecClassGenericPassword` via the Keychain Services API (or `Security` framework directly — no third-party dependency needed for one credential).
@@ -54,6 +56,7 @@ protocol FoundryClient: Sendable {
 (Exact shape is a judgment call — the point is one route per method, `Codable` DTOs decoded from the documented JSON shapes, and no leakage of `URLRequest`/HTTP details into callers.)
 
 Routes to cover, all documented in `docs/JOURNAL-API.md`:
+
 - `GET /api/mcp/write-status` — call before showing the compose UI at all. If `writeEnabled: false` or `bridge.available: false`, show that reason instead of a compose form ("Ask the GM to open Foundry" maps to `bridge.available: false`; a disabled-writes case maps to `writeEnabled: false`). This is the preflight the route was built for — use it as a gate, not just a status readout.
 - `GET /api/mcp/players` — populate the visibility picker (who can this note be shown to).
 - `POST /api/mcp/journal/write/preview` — call when the GM finishes composing and taps "Review." Show the resolved audience (`visibility.visibleTo` in the response) verbatim — this is the whole point of the preview step from the target architecture ("see the exact resolved audience").
