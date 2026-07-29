@@ -118,6 +118,18 @@ The MVP explicitly permits another language or runtime behind the same local pro
 
 The WAV writer, event schema experiment, RTP gap logic, tests, and terminal readiness signals remain useful spike assets. They can be retained as evidence tooling while the Discord/DAVE transport layer is replaced. None of these components should be promoted as the production archive writer because the MVP requires canonical Opus containers owned by the native ingestion boundary.
 
+## Update: candidate root cause found, local patch prepared
+
+Reading D++ 10.1.5's own source turned up a concrete, plausible root cause for the
+order-dependent behavior above, plus a fix. See [PATCHED-DPP.md](PATCHED-DPP.md) for
+the full diagnosis and a locally patched D++ build to test against. Summary: D++'s
+vendored DAVE decryptor has a passthrough-grace-period mechanism for exactly this
+"peer's frames are briefly unencrypted during their own MLS onboarding" case, but
+it has no caller anywhere in D++ — every transitional unencrypted frame hits a hard
+failure path instead. **Not yet confirmed against a live Discord session** — the next
+live-test round should run against `build-patched/` and check
+`dpp-dave-diagnostics.log` alongside the existing evidence files.
+
 ## Decision checkpoint
 
 Do not begin native app/sidecar integration until one transport direction demonstrates:

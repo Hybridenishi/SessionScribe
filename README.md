@@ -14,7 +14,7 @@ The project is in early development. The SwiftUI app is a working UI shell drive
 | [`SessionScribe.xcodeproj/`](SessionScribe.xcodeproj/) | Xcode project for the app. |
 | [`DAVECaptureSpike/`](DAVECaptureSpike/) | A standalone C++ command-line spike that proves out receiving decrypted per-user audio from a DAVE-enabled Discord voice channel. Not linked into the app. |
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the pieces fit together and where the two halves of the repo are expected to meet.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the pieces fit together and where the two halves of the repo are expected to meet, and [docs/FOUNDRY-PUBLISHING-PLAN.md](docs/FOUNDRY-PUBLISHING-PLAN.md) for the implementation plan for the Review Inbox → Foundry publish path, independent of the Discord audio pipeline.
 
 ## The SwiftUI app
 

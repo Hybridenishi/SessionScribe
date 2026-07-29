@@ -5,6 +5,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <span>
 #include <stdexcept>
@@ -84,7 +85,7 @@ int main(int argumentCount, char* arguments[]) {
         const Arguments configuration = parseArguments(argumentCount, arguments);
         const std::string token = readToken();
         session_scribe::spike::Recorder recorder(configuration.outputDirectory);
-        recorder.start("dpp-10.1.5");
+        recorder.start("dpp-10.1.5-sessionscribe-patched");
 
         dpp::cluster bot(token, dpp::i_guilds | dpp::i_guild_voice_states);
         std::atomic_bool joinRequested = false;
@@ -92,9 +93,22 @@ int main(int argumentCount, char* arguments[]) {
         std::atomic_bool receivedAudio = false;
         std::atomic<dpp::discord_client*> voiceShard = nullptr;
 
-        bot.on_log([&token](const dpp::log_t& event) {
+        /*
+         * D++'s own DAVE state machine (session/epoch transitions, decryptor creation,
+         * passthrough grace windows, decrypt success/failure) is already logged at
+         * ll_debug/ll_warning - the spike previously discarded everything below
+         * ll_warning, which threw away exactly the DAVE lifecycle evidence needed to
+         * diagnose the order-dependent capture failures. Persist ll_debug-and-above,
+         * redacted, to a dedicated file so a live-test run can be inspected afterward.
+         */
+        std::ofstream davediagnostics(configuration.outputDirectory / "dpp-dave-diagnostics.log", std::ios::binary | std::ios::trunc);
+        bot.on_log([&token, &davediagnostics](const dpp::log_t& event) {
             if (event.severity >= dpp::ll_warning) {
                 std::cerr << "DPP warning: " << redacted(event.message, token) << '\n';
+            }
+            if (event.severity >= dpp::ll_debug && davediagnostics) {
+                davediagnostics << redacted(event.message, token) << '\n';
+                davediagnostics.flush();
             }
         });
 
