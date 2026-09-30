@@ -2,7 +2,7 @@
 
 SessionScribe is a macOS app for recording and transcribing tabletop RPG sessions played over Discord voice. It captures per-participant audio from a Discord voice channel, transcribes it, and surfaces a live view of the session (participants, transcript, pipeline health) so a table can review and later fold accepted transcript changes into campaign notes.
 
-> **Proposed rebuild (draft, 2026-09-30):** [`docs/REBUILD-SPEC.md`](docs/REBUILD-SPEC.md) proposes replacing the DAVE recorder with Craig recordings, local transcription, and a pipeline into the Azora vaults and a Foundry journal. Until it is approved, the description below remains the current state.
+> **Proposed rebuild (draft, 2026-09-30):** [`docs/REBUILD-SPEC.md`](docs/REBUILD-SPEC.md) proposes rebuilding SessionScribe as the Azora Hub: an atomsk service (Craig → local transcription → vault proposals → Foundry, plus Iris as GM and player agent) with this Mac app as its visual review client. Until it is approved, the description below remains the current state.
 
 The project is in early development. The SwiftUI app is a working UI shell driven by mock data, and the real-time Discord capture pipeline is being proven out separately as a disposable spike before it's promoted into the app.
 

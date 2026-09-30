@@ -1,302 +1,330 @@
-# SessionScribe Rebuild Specification
+# SessionScribe Rebuild Specification — the Azora Hub
 
 | | |
 |---|---|
-| **Date** | 2026-09-30 |
+| **Date** | 2026-09-30 (revision 2, same day) |
 | **Status** | Draft for Nate's review. Nothing here is approved for implementation yet. |
-| **Supersedes** | The recorder track of `docs/SessionScribe-MVP.md` (DAVE capture, live Apple Speech) and the codex store in `docs/CODEX-UPDATE-PIPELINE.md` (branch `docs/codex-update-pipeline`). |
-| **Keeps** | The Foundry journal rules in `docs/FOUNDRY-PUBLISHING-PLAN.md`: preview first, show the resolved audience, re-preview on `409`, and never retry a spent token. |
+| **Supersedes** | The recorder track of `docs/SessionScribe-MVP.md` (DAVE capture, live Apple Speech), the codex store in `docs/CODEX-UPDATE-PIPELINE.md` (branch `docs/codex-update-pipeline`), and revision 1 of this file, which was a headless command-line pipeline that used GitHub PRs as its review screen. |
+| **Keeps** | The Foundry journal rules in `docs/FOUNDRY-PUBLISHING-PLAN.md`: preview first, show the resolved audience, re-preview on `409`, and never retry a spent token. Also the six invariants of `azora-iris/docs/INTENT.md`. |
 
-> **In one sentence:** after a game night, turn the Craig recording into an attributed transcript on hardware Nate owns, feed it into the Azora vaults' existing session-ingest workflow for DM approval, and then publish the player-safe results to a Foundry journal set.
+> **In one sentence:** SessionScribe becomes the **Azora Hub**. It is an always-on service on atomsk that turns Craig recordings into transcripts, turns transcripts into proposed vault changes, and runs Iris. A native Mac app is where Nate sees and approves everything visually, and Discord is where the players meet Iris.
 
 ---
 
 ## 1. Why rebuild
 
-- **The recorder track is stuck.** Milestone 0 (DAVE capture) has not passed since the July 22 live tests (`DAVECaptureSpike/LIVE-TEST-FINDINGS.md`). Everything useful after that point was queued behind it.
-- **Most of what you need to keep track of the campaign already exists, outside this repo:**
+- **The recorder track is stuck.** Milestone 0 (DAVE capture) has not passed since the July 22 tests (`DAVECaptureSpike/LIVE-TEST-FINDINGS.md`). Craig replaces it.
+- **Most of what you need to keep track of the campaign already exists; it just isn't connected or visible:**
   - **Azora-DM** (`Hybridenishi/azora-homebrew`) holds 561 notes and 59 ingested sessions. It already has:
-    - a Session Ingestor agent (`.github/agents/session-ingest.agent.md`)
-    - a Downstream Update Plan with a DM approval block
+    - a Session Ingestor agent and a Downstream Update Plan with DM approval
     - Open Question tickets for continuity conflicts
     - `> [!warning]- DM Only` callouts and `permanent-secrets` for secrets
-  - **Azora-Players** (`hybridenishi/azora-players`) is the player-safe vault, with `tier: world | pc:<name>` and `revealed: <session>`. It is air-gapped from the DM vault by design (Second-Brain decision `Azora-Player-Vault-Architecture`, 2026-08-25). Iris already serves it to players.
-  - **foundryvtt-mcp** already has a documented journal write API with preview and apply (`docs/JOURNAL-API.md`), including `create-entry`, `add-page` and `update-page`.
-- **What's missing is the plumbing between them:** audio to transcript, transcript to vault, player vault to Foundry. This spec rebuilds SessionScribe as that plumbing and leaves the campaign knowledge where it already lives.
+  - **Azora-Players** (`hybridenishi/azora-players`) is the player-safe vault, with `tier: world | pc:<name>` and `revealed: <session>`. It is air-gapped from the DM vault.
+  - **Iris** (`hybridenishi/azora-iris`) is live in smoke-test form as container `iris-bot` on atomsk. She reads only the player vault, enforces tiers in code before the model runs, and passed a 49-check leak sweep. Her brain is local Qwen on naota, with DeepSeek as the cloud fallback.
+  - **foundryvtt-mcp** already has a documented journal API with preview and apply.
+- **What's missing:**
+  - plumbing from audio to transcript to vault to Foundry
+  - one place to see it all
+  - a way to review changes as **visual before/after cards** rather than Markdown plans and diffs
 
 ### "Won't the vault be too much for the app to keep track of?"
 
-No. SessionScribe never loads the vault into its own memory or database.
-- The DM vault is about 28 MB, mostly assets; the Markdown is a few MB.
-- A session transcript is small. The session 58 transcript archived in the DM vault is 69 KB, roughly 17k tokens, so a whole session fits in one model context, even the 64K context of the local 27B model.
-- The ingest step works like the existing agents already do: it reads the handful of notes a session touches, not the whole vault.
+No.
+- The hub reads the vaults from their checkouts on atomsk; the Mac app holds no copy.
+- The DM vault's Markdown is a few MB. Qdrant already indexes it (`azora` collection, about 8.3k chunks), and indexes the player vault too (`azora-players`, 308 chunks).
+- A session transcript is small: session 58's was 69 KB, roughly 17k tokens. It fits in one model context.
+- The app fetches only what's on screen, such as one session, one note, or one proposal batch.
 
 ---
 
 ## 2. Decisions recorded (Nate, 2026-09-30)
 
-1. **Rebuild, not patch.** The app was stuck, and this replaces its direction.
-2. **Recording source: Craig.** No custom Discord voice client. The DAVE spike is parked (section 11).
-3. **Knowledge store: Nate's vaults.** GM canon lives in Azora-DM. Player-facing content lives in Azora-Players and is published to a Foundry VTT journal set for the players and for use in play.
-4. **Models: local first.** If local models aren't good enough for a step, use Nate's own **Codex (ChatGPT)** or **Claude** subscription through their official CLIs. A pay-per-token API (DeepSeek) is the last resort, not the default.
+1. **Rebuild, not patch.**
+2. **Recording source: Craig.** The DAVE spike is parked.
+3. **Knowledge store: Nate's vaults.**
+   - GM canon lives in Azora-DM.
+   - Player knowledge lives in Azora-Players, which is published to a Foundry VTT journal set for the players and for use in play.
+4. **Models: local first.** When local isn't good enough, use Nate's own Codex (ChatGPT) or Claude subscription through the official CLIs. DeepSeek is a last resort for new work.
+5. **A central hub with an app**, not a headless pipeline. Changes are reviewed **visually**, not as Markdown files.
+6. **Iris lives in the hub** and is the agent both in the app and in Discord, for Nate and for the players.
+7. **"One face, two agents."**
+   - Iris has one persona everywhere, but two separately privileged processes:
+     - **GM-Iris** can see the DM vault and transcripts, and answers only Nate.
+     - **Player-Iris** stays air-gapped exactly as today.
+   - The boundary is enforced by credentials, containers and file mounts, never by prompts.
+8. **The app is a native SwiftUI Mac app.** It reuses this Xcode project and is a client of the hub's API.
 
 ---
 
-## 3. Pipeline overview
+## 3. Architecture
 
 ```
- Craig multi-track export (.zip, one file per speaker)
-   │  S1 ingest          → session archive (outside git): audio + manifest
-   ▼
- S2 transcribe (local Whisper, one track at a time, VAD-gated)
-   │                     → utterances.ndjson (timed, attributed) + transcript.txt (legacy format)
-   ▼
- S3 stage into Azora-DM  → _INBOX/Session-NNN-transcript.txt on a branch
-   ▼
- S4 session ingest (existing Session Ingestor, run headless)
-   │                     → session note draft + _INBOX/Session-NNN-Downstream-Plan.md
-   │                     → PR on Azora-DM ◄── Nate approves or edits the plan
-   │  (approved plan applied by the existing Downstream Update Orchestrator)
-   ▼
- S5 reveal pass          → PR on Azora-Players (tier world / pc, revealed: NNN)
-   │                     ◄── Nate does the secret sweep and merges
-   ▼
- S6 Foundry sync (reads Azora-Players ONLY)
-                         → preview → show audience → apply, one entry or page at a time
+                         ┌──────────────────────── atomsk ───────────────────────────┐
+  Craig export (.zip) ──►│  scribe-hub  (container; Python service; tailnet-only API) │
+                         │   • pipeline S1–S6 (ingest→transcribe→propose→reveal→sync) │
+                         │   • proposal store (SQLite index; vault git = source)       │
+                         │   • rw: Azora-DM checkout, Azora-Players checkout           │
+                         │   • rw: session archive (audio, transcripts)                │
+                         │                                                             │
+                         │  iris-gm  (container)                                       │
+                         │   • reads: Azora-DM, transcripts, Qdrant `azora`            │
+                         │   • writes: NOTHING directly — only files proposals         │
+                         │     into scribe-hub                                         │
+                         │   • talks to: Nate only (app chat + private Discord bot)    │
+                         │                                                             │
+                         │  iris-bot  (container — exists today = Player-Iris)         │
+                         │   • reads: Azora-Players (ro), Qdrant `azora-players` only  │
+                         │   • no route to scribe-hub, iris-gm, or the DM vault        │
+                         │   • emits: health + audit events (one-way) to scribe-hub    │
+                         └──────────────▲──────────────────────────▲──────────────────┘
+                                        │ tailnet HTTPS + token     │ Discord gateway
+                         ┌──────────────┴───────────┐     ┌─────────┴────────────────┐
+                         │ SessionScribe (Mac app)  │     │ Discord: players ↔ Iris   │
+                         │ Dashboard · Sessions ·   │     │ Nate ↔ Iris (GM, private) │
+                         │ Review · Codex · Reveal ·│     └───────────────────────────┘
+                         │ Foundry · Iris           │
+                         └──────────────────────────┘
+   naota: local Whisper (GPU) + local LLM router      Foundry sidecar: journal API
 ```
 
-Every arrow that changes canon or reaches players passes through a human gate: a PR merge or a Foundry preview confirmation. No stage merges, publishes, or edits `main` of either vault on its own.
+### 3.1 Components
 
----
-
-## 4. Stages
-
-### S1 — Ingest a Craig recording
-
-- **Input:** Craig's multi-track download, one audio file per Discord user, all aligned to the recording start. FLAC is preferred.
-  - Craig deletes recordings after a short retention window, so download right after the session.
-  - **Verify on the first real export:** track alignment, file naming, and whether a user who dropped and rejoined gets one track or two.
-- **Speaker map:** a campaign config maps each Craig track (Discord username) to the transcript label the vault already uses, and marks the GM:
-
-  ```yaml
-  # campaign.yaml (in this repo, no secrets)
-  campaign: azora
-  speakers:
-    <discord-username-1>: { label: "Nate/DM", role: gm }
-    <discord-username-2>: { label: "Flame/Mortala", role: player, pc: Mortala }
-    <discord-username-3>: { label: "Aaron/Exodus", role: player, pc: Exodus }
-    <discord-username-4>: { label: "Jackie Daytona", role: player, pc: "Jackie Daytona" }
-  ```
-
-  These labels match `SPEAKER_MAP` in `azora-homebrew/Meta/Scripts/clean-classify-transcript.js`, so existing tooling keeps working.
-  - An unmapped track stops the run with a clear message. It never guesses a name.
-- **Output:** a session archive folder under a configurable root **outside any git repo** (for example an atomsk share), holding:
-  - the original zip, untouched
-  - `manifest.json`: session number, date played, tracks, durations, the speaker map snapshot, and tool versions
-- The audio in this folder is the authoritative record. Everything after it can be regenerated.
-
-### S2 — Transcribe locally
-
-- **Engine:** Whisper large-v3-class models, run **one track at a time**. Because Craig gives each speaker a separate track, attribution comes free and needs no speaker diarization.
-- **Where it runs, in order of preference:**
-  1. **MacBook Pro (48 GB Apple Silicon)** using an MLX- or Metal-accelerated Whisper build.
-  2. **naota (RX 7900 XT)** using a GPU-accelerated whisper.cpp build.
-  3. **Not atomsk's container CPU.** It measured about 5× slower than realtime on 2 cores (Second-Brain `Homelab.md`, 2026-09-17), which is too slow for a four-hour, multi-track session.
-- **VAD is required.** Per-speaker tracks are mostly silence, and Whisper makes up text on silence ("thanks for watching"). Transcribe only the speech regions a VAD finds, and drop segments that match the usual hallucination phrases or show no-speech signals.
-- **Vocabulary:** seed Whisper's initial prompt with campaign names: PC names plus the `title` and `aliases` of the NPC, location and faction notes in Azora-DM, most recently seen first, trimmed to fit.
-- **Output:**
-  - `utterances.ndjson`, one line per utterance:
-    - `utterance_id` (stable within this transcript revision)
-    - `speaker_label`
-    - `track`
-    - `start_ms` and `end_ms` on the shared session clock
-    - `text`
-    - `no_speech_prob` and average log-probability, for diagnostics
-    - `transcript_revision`
-  - `transcript.txt` in the **legacy speaker-block format** the vault has already ingested 59 times: speaker label on one line, text on the next, blank line between. Utterances are merged across tracks in chronological order, and consecutive lines from the same speaker are joined.
-- **No cloud in S2.** Audio never leaves Nate's machines.
-
-### S3 — Stage into the DM vault
-
-- On a new branch `scribe/session-NNN` in Azora-DM, write `_INBOX/Session-NNN-transcript.txt`.
-  - The vault's own git rules (AGENTS.md §6) require a branch and PR for bulk `_INBOX` imports.
-- Pull before writing. If the working tree is dirty or `main` has moved, stop and report instead of forcing.
-
-### S4 — Session ingest (the LLM step)
-
-- **Run the vault's existing Session Ingestor headlessly, inside the Azora-DM checkout**, so it follows that repo's `AGENTS.md`, skills and agent files instead of a second, drifting prompt kept here.
-  - Its contract already requires a **Downstream Update Plan** with a DM approval block, and forbids auto-importing NPCs.
-- **Output:**
-  - a draft session note in `Chronicle/Sessions/` with `status: draft`
-  - `_INBOX/Session-NNN-Downstream-Plan.md`
-  - any Open Question tickets for continuity conflicts
-  - all of it committed to `scribe/session-NNN`, with a **PR** opened on Azora-DM
-- **Review happens on the PR.** Nate approves or edits the plan there. After approval, the existing Downstream Update Orchestrator applies it, as a second commit on the same branch or a follow-up run. Merging is always Nate's action.
-- **Evidence:** the plan should cite transcript lines (speaker and timestamp from `utterances.ndjson`) for each proposed change, so Nate can check claims against what was actually said. This is a small addition to the ingest agent's output contract, made in the Azora-DM repo.
-- **Provider choice:** see section 5.
-
-### S5 — Reveal pass into the player vault
-
-- **When:** after the S4 PR merges.
-- **What:** propose updates to Azora-Players following the rules already in its `Build-Spec.md`:
-  - `tier: world` for knowledge any well-informed inhabitant would have
-  - `tier: pc:<name>` for things only one character knows
-  - `revealed: NNN`, plus a `source:` list of DM-vault files
-  - an in-world voice, with no "in session 52" meta commentary
-- **The transcript is the reveal evidence.** Something said at the table, with the players present, is the strongest signal that it is now player knowledge. The reveal agent works from the merged session note and the transcript, not from the DM vault's DM-only blocks.
-- **Hard exclusions** (from Build-Spec.md) are enforced by an automated tripwire before the PR opens:
-  - no content from `permanent-secrets`
-  - no text from inside `DM Only` callouts
-  - nothing from `Meta/` or `_INBOX/`
-  - The tripwire checks for normalized substrings and long shared runs of words. Paraphrase remains Nate's secret sweep to catch.
-- **Output:** a PR on Azora-Players on branch `reveal/session-NNN`. Nate does the secret sweep there and merges.
-
-### S6 — Foundry journal sync
-
-- **Source:** the Azora-Players `main` branch **only**. The sync code refuses to read any path under Azora-DM. That makes the air gap structural rather than a matter of convention.
-- **Mapping:**
-  - each player-vault note becomes one Foundry `JournalEntry` with one "Overview" page
-  - Markdown is rendered to HTML
-  - wikilinks become `@UUID[JournalEntry.<id>]{Label}` when the target is already synced, and plain text otherwise
-- **Visibility:**
-  - `tier: world` notes → profile `party`
-  - `tier: pc:<name>` notes → profile `players` with the owning character's name
-  - Nothing is ever published with profile `gm` automatically. GM-only material stays in Obsidian.
-- **Link state:** `.foundry/links.json` in Azora-Players, versioned in git. It maps note path to entry ID, page ID, last-published content hash, and the audience receipt (`visibleTo`) from the last apply.
-  - Unchanged hash: skip.
-  - Changed hash: `update-page`.
-  - New note: `create-entry`.
-- **Per-session recap (optional; Nate to decide):** a short, player-voiced recap, published as a new entry in a "Session Recaps" folder.
-- **API rules (from `docs/JOURNAL-API.md`):**
-  - Check `write-status` first. Apply needs Nate's Foundry tab open.
-  - Preview every write and **show `visibleTo`** in the run summary.
-  - Batch confirmation is allowed only after Nate has seen the audience list for the whole batch.
-  - On `409`, preview again. Never retry the token.
-  - The API can't create folders, so Nate creates the target folders in Foundry once, by hand.
-  - The API can't delete entries, so the sync never tries. A note removed from the vault is reported as "orphaned in Foundry" for Nate to handle.
-- **Credentials:** the sidecar URL and `API_KEY` come from the OS keychain, or a `0600` env file on atomsk. They are never stored in a repo, a log, or `links.json`.
-- **Prerequisite:** the `foundry-sidecar` container was crash-looping with a `401` (Second-Brain `Homelab.md`, 2026-08-29 and 2026-09-10). Confirm it is healthy before S6 work starts.
-
----
-
-## 5. Model and provider policy
-
-| Step | Default | Fallback | Why |
+| Component | Runs where | Owns | Must never |
 |---|---|---|---|
-| S2 transcription | Local Whisper (Mac or naota) | none | Free, private, and good enough. Audio never leaves the house. |
-| S4 session ingest | **Codex CLI** on the ChatGPT subscription | Claude Code CLI on the Claude subscription, then a local model after the trial | This is an agent task: it reads and edits many files and follows long vault rules. Second-Brain `Local-Models.md` records that local models are "not yet good enough for the main coding workflow". Codex reads `AGENTS.md` natively. |
-| S5 reveal pass | Same as S4 | Same as S4 | Same shape of task. The secret sweep stays human. |
-| Recap drafting, light cleanup | Local Qwen3.8-27B on naota (64K context) | Subscription CLI | A short single-prompt job that fits local models well. |
-| Anything | — | DeepSeek API (last resort) | Only if Nate opts in per campaign. It is the only option that bills per token and sends table talk to a third-party API. |
+| **scribe-hub** | atomsk container | Pipeline jobs, proposal store, vault writes (on branches, merged only on Nate's approval), Foundry sync, the API for the app | Merge to either vault's `main` or publish to Foundry without an explicit approval from the app |
+| **iris-gm** (GM-Iris) | atomsk container | Nate's conversational agent: answers DM-side questions, drafts proposals on request ("add that Thorn owes Fang a favor") | Write to a vault directly; talk to anyone except Nate; run in any channel players can read |
+| **iris-bot** (Player-Iris) | atomsk container (exists) | Player lore answers in voice, tier-gated in code | Read anything but the player vault and its index. **Unchanged from `azora-iris` INTENT.md.** |
+| **SessionScribe.app** | Nate's Mac | Visual review and control; audio playback of cited moments | Hold credentials other than its own hub token (in Keychain); talk to Foundry or GitHub directly |
 
-**Rules for using the subscriptions:**
-- Use only the **official CLIs** (`codex exec`, `claude -p`), signed in by Nate on his own machines, for his own use.
-  - Never extract, copy or proxy their login tokens.
-  - Never call subscription endpoints directly from our code.
-  - Check the current plan terms before relying on this.
-- Headless Claude Code draws down the plan's usage faster than the interactive app (Second-Brain research note, 2026-09-22: about 1.7×). One ingest per session should be fine; batch re-runs may not be.
-- **Where it runs:** on the MacBook, or on the `paperclip` VM, where both CLIs have been signed in since 2026-09-25. The Hermes container's `claude` CLI has never been signed in, and Hermes's bot surface can't use the subscription plugin (upstream issue #16), so don't plan on Hermes calling the subscription itself. Hermes can trigger the pipeline and report on it.
-- For Claude Code, add a one-line `CLAUDE.md` to Azora-DM that imports `AGENTS.md`, so both CLIs read the same rules.
+### 3.2 Why "one face, two agents" is built this way
 
-**The trial decides the local question, not guesses.** Section 9 (R0) runs the same transcript through Codex, Claude and local Qwen3.8-27B, and Nate grades the three Downstream Plans blind. A local model takes over the S4 role only if it matches on that grading.
+The previous player bot was taken down for leaking DM material, and `azora-iris` exists so that failure is impossible by design. Merging GM powers into it would undo that. So:
 
----
+- **Separate containers, separate mounts.** Player-Iris's container has no DM-vault mount and no network route to the hub's write API or to GM-Iris. A bug in Player-Iris can't reach DM data because the data isn't there.
+- **Separate Discord bot accounts with the same face.**
+  - The player-facing bot is today's `Azora#4235`.
+  - GM-Iris is a **second bot application** with the same name, avatar and persona card. It is invited only to a private channel (for example `#iris-gm`) that only Nate can see.
+  - It also hard-checks Nate's Discord **user ID**, not a role, and ignores everyone else. Roles are for sorting players; they aren't enough to protect secrets.
+  - Two tokens means leaking one can't impersonate the other.
+- **Same persona, different knowledge.** Both load `persona/iris.md`. GM-Iris adds a GM-mode rules card, and in-character framing is optional there.
+- **Proposals are the only way GM-Iris changes anything.** Everything GM-Iris wants to change becomes a proposal card in the app, exactly like the ones from sessions. There's one approval path for both.
 
-## 6. Where it runs and what gets built
+### 3.3 Where the models run
 
-- **SessionScribe becomes a small command-line pipeline (`scribe`)**, written in Python to match the rest of Nate's automation and the Whisper tooling, living in this repo under `pipeline/`:
+| Job | Default | Fallback | Notes |
+|---|---|---|---|
+| Transcription (S2) | Local Whisper on **naota's GPU**, driven by the hub over the LAN | The MacBook, on demand | Audio never leaves the house. atomsk's CPU is too slow (about 5× slower than realtime). |
+| Session ingest and proposals (S4) | **Codex CLI** (ChatGPT subscription) in the hub container | Claude Code CLI (Claude subscription), then local Qwen after the R0 trial | An agent-style task that follows the vault's `AGENTS.md`, which Codex reads natively. |
+| Reveal pass (S5) | Same as S4 | Same as S4 | The secret sweep is always Nate's. |
+| GM-Iris chat | Local Qwen3.8-27B on naota | Codex or Claude CLI when naota is in gaming mode or the question needs file-hopping | The persona card works on the local model today (Player-Iris's Phase 1 trial). |
+| Player-Iris | Unchanged: local model on naota | Unchanged: DeepSeek cloud | Revisit the fallback: it sends player questions and player-vault snippets to DeepSeek. That's player-safe data, but it still needs the table's OK (§8). |
 
-  ```
-  scribe ingest <craig.zip> --session 60      # S1
-  scribe transcribe <session-dir>             # S2 (runs on Mac or naota)
-  scribe stage <session-dir>                  # S3
-  scribe ingest-vault <session-dir> --provider codex|claude|local   # S4
-  scribe reveal --session 60 --provider ...   # S5
-  scribe foundry-sync [--dry-run]             # S6
-  scribe run <craig.zip> --session 60         # S1→S4, stops at the first human gate
-  ```
-
-- Each stage is **idempotent and resumable**. It records its state in the session archive and refuses to overwrite a later stage's output without `--force`.
-- **Hermes** can run `scribe run` and post status in Discord, like its other jobs. That's optional and comes later.
-- **The SwiftUI app is parked, not deleted.** A native front-end can come back later as a thin shell over `scribe`: drop a zip, watch progress, open the PRs. Review happens on GitHub, which Nate already uses for both vaults.
+**Subscription rules:**
+- Official CLIs only, signed in by Nate once inside the hub container.
+- Never extract or proxy their tokens.
+- Check the current plan terms before relying on this.
+- Headless Claude draws down plan usage about 1.7× faster than the interactive app (Second-Brain research note, 2026-09-22).
+- One naota GPU job at a time, as Iris's invariant 6 already requires. The hub owns a **single GPU queue** that Whisper, GM-Iris and Player-Iris all go through. That also fixes Iris review finding **B3**.
 
 ---
 
-## 7. Privacy and consent
+## 4. The pipeline (the hub's engine)
 
-- Craig announces the recording in Discord. The table has agreed to being recorded.
-- **Tell the table once** that transcripts are processed by an AI service, and which one. The default path (local Whisper plus Codex or Claude) sends **text only**, never audio, to OpenAI or Anthropic under Nate's own account. DeepSeek is used only if the table has agreed.
-- Transcripts live in the DM vault's `_INBOX` and are archived there after ingest, as today. They never enter Azora-Players or Foundry.
-- Secrets never enter logs, repos, `links.json` or run summaries.
+Unchanged in substance from revision 1. What changed is that each stage now reports progress to the app, and review happens in the app.
 
----
+| Stage | What | Output | Human gate |
+|---|---|---|---|
+| **S1 Ingest** | Import a Craig multi-track zip (dropped onto the app, which uploads it to the hub). Map each track to a speaker using `campaign.yaml` (Discord username → label, role, PC). An unmapped track stops the run and asks. | Session archive, outside git: original zip plus `manifest.json` | — |
+| **S2 Transcribe** | Local Whisper, one track at a time, VAD-gated, with campaign names as the vocabulary prompt. | `utterances.ndjson` (speaker, `start_ms`/`end_ms`, text, confidence) and `transcript.txt` in the legacy speaker-block format the vault already ingests | — |
+| **S3 Stage** | Commit the transcript to `_INBOX/` on branch `scribe/session-NNN` of Azora-DM. | Branch | — |
+| **S4 Propose** | Run the vault's Session Ingestor headless on that branch. The agent contract gains a **structured output** (§5.1) next to the Markdown Downstream Plan. | Draft session note, Downstream Plan, OQ tickets, and `proposals.json` | **Review screen**: accept, edit, reject or defer each card, then **Publish to canon**, which merges |
+| **S5 Reveal** | Propose Azora-Players updates using the tier rules in `Build-Spec.md`. An automated tripwire blocks `permanent-secrets` and `DM Only` text. | Branch `reveal/session-NNN` and `proposals.json` | **Reveal screen**: Nate's secret sweep, then publish |
+| **S6 Foundry** | Sync Azora-Players `main` only to the Foundry journal set, using preview → audience → apply. | Foundry entries; `.foundry/links.json` | **Foundry screen**: see who can read each entry, then apply |
 
-## 8. Acceptance criteria
-
-1. Given a real Craig export and `campaign.yaml`, `scribe transcribe` produces `utterances.ndjson` and a `transcript.txt` that `clean-classify-transcript.js` parses with no unknown speakers.
-2. An unmapped Craig track stops S1 with a message naming the track. Nothing is guessed.
-3. Silence-only stretches produce no utterances. A fixture of a silent track with known hallucination bait yields zero lines.
-4. S4 opens a PR on Azora-DM containing a draft session note and a Downstream Plan with a DM approval block. Nothing lands on `main` without Nate merging.
-5. Every change proposed in the Downstream Plan cites at least one transcript speaker and timestamp.
-6. The S5 tripwire blocks a reveal PR that contains a planted `permanent-secrets` string or a sentence copied from a `DM Only` callout.
-7. S6 reads nothing under Azora-DM. A unit test proves the path guard.
-8. S6 shows the resolved `visibleTo` for every write before applying. A `409` leads to a fresh preview, never a retried token.
-9. Re-running S6 with no vault changes makes zero writes.
-10. No API key or token appears in any repo, log, archive, or `links.json`.
-11. The whole pipeline works with **no** subscription CLI signed in, as long as a local provider is configured. Only S4 and S5 quality changes.
-
----
-
-## 9. Milestones
-
-- **R0 — One real session, mostly by hand (the trial).**
-  - Take the next game night's Craig export, or an older one if it's still available.
-  - Transcribe it with a throwaway script.
-  - Compare it against the previous transcript source for the same kind of session: speaker accuracy, name spelling, hallucinations.
-  - Run the Session Ingestor with Codex, Claude and local Qwen on the same transcript.
-  - Nate grades the plans blind (the `model-trial-harness` method from Second-Brain).
-  - **Exit:** a transcript Nate considers at least as good as today's source, and a chosen S4 provider.
-- **R1 — `scribe` S1–S3.** Ingest, transcribe and stage, with the section 8 criteria 1–3 as tests.
-- **R2 — S4 headless ingest and PR.** Also add transcript citations to the Session Ingestor contract, in the Azora-DM repo.
-- **R3 — S5 reveal pass and tripwire.**
-- **R4 — S6 Foundry sync.** Blocked on a healthy `foundry-sidecar`. Dry-run first, then the world tier, then the PC tier.
-- **R5 — Hardening and comfort.** Hermes trigger, resumable runs, run summaries in Discord, and optionally a thin Mac front-end.
-
-R0 needs no code in this repo and can happen at the very next session.
+Rules carried over from revision 1:
+- Each stage is idempotent and resumable.
+- Audio is the authoritative record.
+- Transcripts never enter Azora-Players or Foundry.
+- The Foundry sync can't read Azora-DM; a path guard enforces this and has a test.
+- Foundry folders are created by hand once, because the API can't create them.
+- The API can't delete entries, so notes removed from the vault are only reported, never deleted.
+- `foundry-sidecar` must be healthy first. It was crash-looping with a `401` in September.
 
 ---
 
-## 10. How this resolves the review of `CODEX-UPDATE-PIPELINE.md`
+## 5. Visual review — "see the update, not the Markdown"
 
-| Problem in that spec | How the rebuild handles it |
+### 5.1 The structured proposal (what the app renders)
+
+The Session Ingestor, the reveal agent and GM-Iris all emit the same shape. The Markdown Downstream Plan is still written for the vault's own history, but the app renders from this:
+
+```json
+{
+  "proposal_id": "p-060-014",
+  "batch": "session-060",               // or "iris-gm-2026-10-02T21:14"
+  "vault": "dm" ,                        // dm | players
+  "op": "update-section",                // create-note | update-section | add-to-list |
+                                         // set-frontmatter | open-question | move-note
+  "target": "Characters/NPCs/Leon-Blackstone.md",
+  "section": "Relationships",
+  "before": "…current section text…",   // filled by the HUB from the file, never by the model
+  "after":  "…proposed section text…",
+  "secret": false,                       // true → lands inside a `DM Only` callout
+  "tier": null,                          // players vault only: "world" | "pc:mortala" …
+  "rationale": "Leon vouches for the party to Angelica.",
+  "evidence": [ { "session": 60, "utterance_id": "u0421" } ],   // hub resolves text + audio
+  "conflicts_with": []                   // note/section refs → shown side by side
+}
+```
+
+Validation happens in the hub, before the app ever sees a proposal:
+- The target path exists, or is valid for `create-note`.
+- The `before` text is re-read from the file.
+- Every piece of evidence resolves to a real utterance in the session's `utterances.ndjson`.
+- The quote shown is the hub's copy of that utterance, not the model's wording.
+- A players-vault proposal can't contain `permanent-secrets` or text from `DM Only` callouts (the tripwire).
+- Proposals that fail validation are shown in a "Rejected by checks" tray with the reason. They aren't silently dropped.
+
+### 5.2 The app's screens
+
+| Screen | What Nate sees |
 |---|---|
-| One visibility tier per record, though an NPC mixes public facts and secrets | Tiers are handled per fact by what the vaults already have: `DM Only` callouts and `permanent-secrets` inside a note, and the separate Azora-Players vault for player-safe facts. |
-| Conflict citations couldn't point at older sessions or hand-written facts | Conflicts become Open Question tickets, the vault's existing mechanism, which link any note or session. |
-| Model-written quotes were fragile | The plan cites a speaker and timestamp. The app, not the model, holds the text in `utterances.ndjson`. |
-| Name matching missed ASR-mangled homebrew names | The vault's names seed Whisper's vocabulary, so names are spelled right before any matching happens. |
-| Duplicate proposals within one run | One transcript produces one plan: the whole session fits in a single context, with no chunking. |
-| A new codex store to design and keep in sync | None. The vaults are the store. |
-| Blocked on DAVE | Craig replaces DAVE entirely. |
+| **Dashboard** | Next and last session; pipeline progress per stage; Iris health (both agents, naota mode, queue depth); Foundry sidecar status; items waiting for review |
+| **Sessions** | Session list. The detail view has the transcript by speaker, colored per player. Click a line to **play that moment** from that speaker's track. Also: a timeline of scenes, the draft session note rendered, and a "re-run transcription" option |
+| **Review** | Proposal cards grouped by entity. Each card shows: the **entity header** (portrait from `Assets/Characters`, name, type); a **rendered before/after** with changes highlighted in rendered text, not a raw diff; a secret badge; evidence chips that play audio and show the quote; and conflicts side by side. Actions: Accept · Edit (rich editor) · Reject · Defer · "Ask Iris about this". The **Publish to canon** button merges and pushes, and reports any conflict with Nate's own Obsidian edits |
+| **Codex** | A visual browser over the DM vault: NPC, location and faction cards with portraits; quests and arcs; the in-world timeline built from `sort-date`; Open Question tickets. A **"What do the players know?"** toggle shows the DM note beside its Azora-Players counterpart and highlights what hasn't been revealed yet |
+| **Reveal** | Player-vault proposal cards, labeled world or PC tier, with tripwire results. This is Nate's secret sweep, one card at a time |
+| **Foundry** | Journal entries to create or update, each with the **resolved audience** from preview (`visibleTo`); apply per entry or in a batch after reviewing; history of receipts; orphans |
+| **Iris** | Chat with GM-Iris; the Player-Iris activity feed (a mirror of the audit channel); an on/off switch for players; the persona card; leak-sweep results |
+| **Settings** | Hub address and token (Keychain), `campaign.yaml` speaker map, model routing, Foundry folders |
+
+The existing app shell's navigation, `ServiceHealth` model and `HealthListView` carry over. The recorder-specific models (`LiveSessionViewModel`, `SidecarClient`, `TranscriptionEngine`) are retired.
+
+### 5.3 Vault writes and Obsidian coexistence
+
+- Azora-DM's `AGENTS.md` says agents share `main` with Nate's live Obsidian sessions and must pull first. So the hub always works on a **branch**. **Publish** does pull → merge → push.
+- If Nate's own edits conflict, the app shows both versions and asks. The hub never force-pushes.
+- The hub's own commits follow the vault's rules: one commit per coherent change, plus `CHANGELOG.md` or `Meta/DM-Change-Log.md` entries per AGENTS.md §6.
+- GitHub PRs become optional. The hub can open one for the record, but Nate doesn't need GitHub to approve anything.
 
 ---
 
-## 11. What happens to the existing repo
+## 6. Hub API (sketch)
+
+Tailnet-only HTTPS with a per-device token. The app polls, or uses server-sent events for job progress.
+
+```
+GET  /status                         dashboard rollup
+POST /sessions            (zip)      S1 ingest → job id
+GET  /sessions/:n                    manifest, stage states
+GET  /sessions/:n/utterances         paged transcript
+GET  /sessions/:n/audio/:track?from=&to=   clip for playback
+GET  /proposals?batch=&state=        cards
+PATCH /proposals/:id                 accept | edit(after) | reject | defer
+POST /batches/:id/publish            merge + push (dm or players)
+GET  /codex/notes?type=&q=           rendered entity cards
+GET  /codex/notes/*path              one note (+ player-vault counterpart)
+POST /foundry/preview                → per-entry audience receipts
+POST /foundry/apply                  confirmation tokens from preview only
+POST /iris-gm/chat        (SSE)      GM-Iris conversation
+GET  /iris/player/feed               Player-Iris audit mirror (read-only)
+```
+
+---
+
+## 7. Iris work this rebuild depends on
+
+Player-Iris goes to players only after the blockers from `azora-iris/docs/REVIEW-2026-09-14.md` are closed. Verify each against the repo's current `main`, since PR #19 may already cover some of them:
+- **A1**: the guard vocabulary in the repo. The repo is private now, but history still holds it.
+- **B2**: the tautological vault-root check.
+- **B6**: re-indexing never deletes, so redactions don't take effect. This matters more once the hub publishes reveals regularly.
+- **B3**: the GPU lock, which the hub's GPU queue now provides.
+- **B5**: a retrieval outage is served to players as canon.
+- The DM-path tests (**B4**) and invariant D (**B7**).
+
+New pieces:
+- **`iris-gm`**: a new container and a second Discord bot application.
+  - Persona shared with Player-Iris, plus a GM rules card.
+  - Retrieval over the DM index (`azora`; rename it to `azora-dm`, as the Iris hardening offer already suggested). Player-Iris's retriever refuses any collection other than `azora-players`.
+- **Re-index on publish**: after a reveal publishes, the hub triggers a rebuild of `azora-players` so Player-Iris knows the new facts the same night.
+
+---
+
+## 8. Privacy and consent
+
+- Craig announces the recording. The table has agreed to being recorded.
+- **Tell the table once**, plainly:
+  - transcripts are made locally
+  - text excerpts may be processed by OpenAI or Anthropic under Nate's account for the DM-side steps
+  - Player-Iris's fallback sends questions to DeepSeek
+- Audio never leaves Nate's machines.
+- Transcripts and DM notes never reach Player-Iris, Azora-Players or Foundry.
+- Credentials (Discord tokens ×2, Foundry `API_KEY`, hub device tokens, the CLI logins) live in `0600` secret files on atomsk and in Keychain on the Mac. They never go in a repo, a log, a proposal or an audit post.
+- The Discord bot token pasted in chat on 2026-09-13 should be reset before players arrive, if that hasn't already happened (Second-Brain daily log 2026-09-14).
+
+---
+
+## 9. Acceptance criteria
+
+1. Dropping a real Craig zip onto the app produces a transcript the app can play back line by line, with no unmapped speakers.
+2. Silence-only audio produces no utterances; a hallucination-bait fixture yields zero lines.
+3. Every proposal card shows a rendered before/after; `before` comes from the file, not the model.
+4. Every piece of evidence resolves to a real utterance, and its audio plays. A proposal with a bad citation lands in "Rejected by checks" with the reason.
+5. Nothing reaches Azora-DM `main`, Azora-Players `main` or Foundry without an explicit Publish or Apply in the app.
+6. The reveal tripwire blocks a planted `permanent-secrets` string and a sentence copied from a `DM Only` callout.
+7. The Foundry sync reads nothing under Azora-DM (path-guard test), shows `visibleTo` before every apply, and re-previews on `409`.
+8. **Player-Iris's container has no DM-vault mount and can't reach `scribe-hub` or `iris-gm` over the network.** An integration test asserts all three.
+9. GM-Iris ignores messages from any Discord user except Nate's ID, and from any channel outside its allow-list. Tested with a non-Nate account.
+10. GM-Iris cannot change a vault except through a proposal that Nate accepts.
+11. One naota GPU job at a time, hub-wide. A test runs Whisper, GM-Iris and Player-Iris jobs concurrently and sees them serialized.
+12. No secret appears in any repo, log, archive, proposal, `links.json` or Discord audit post.
+
+---
+
+## 10. Milestones
+
+- **H0 — Trial and Iris safety (no hub code).**
+  - Run the R0 trial on the next game night's Craig export: transcript quality, and Codex vs Claude vs local on the ingest step, graded blind.
+  - In parallel, close the Iris blockers from §7.
+  - Exit: a trusted transcript path, a chosen S4 provider, and Player-Iris cleared to meet players.
+- **H1 — Hub skeleton and Sessions.**
+  - `scribe-hub` container with S1–S3 and the GPU queue.
+  - App: Settings, Dashboard, and Sessions with the transcript and audio playback.
+- **H2 — Review and publish to canon.**
+  - The S4 structured-proposal contract, which is a change in the Azora-DM repo's agent files.
+  - Hub validation; the Review screen; Publish.
+- **H3 — Codex browser and Reveal.**
+  - Visual entity cards and the players-know toggle.
+  - S5 with the tripwire; re-index `azora-players` on publish.
+- **H4 — Foundry.** S6 with the audience-receipt screen. Needs a healthy `foundry-sidecar`.
+- **H5 — GM-Iris.** The `iris-gm` container and second bot; app chat; proposals from chat; the Player-Iris feed in the app.
+- **H6 — Hardening.** Recovery after reboots (atomsk rebooted without warning on 09-26), backups of the session archive, and Player-Iris rollout to the game server.
+
+H0 can start at the very next session. Each milestone after it gives you something usable on its own.
+
+---
+
+## 11. What happens to the existing repos
 
 | Path | Fate |
 |---|---|
-| `DAVECaptureSpike/` | **Parked.** Kept for reference. Its findings stay valid if a native recorder is ever wanted again. |
-| `SessionScribe/` (SwiftUI) and `SessionScribe.xcodeproj` | **Parked.** A possible future front-end over `scribe`. |
-| `docs/SessionScribe-MVP.md` | **Superseded** for recording and live transcription. Its archive principles (audio is authoritative, append-only transcript revisions) carry over to S1 and S2. |
-| `docs/FOUNDRY-PUBLISHING-PLAN.md` | **Rules kept, client rewritten.** S6 implements the same API contract in the pipeline instead of a Swift client. Step 0 (ATS and entitlements) only matters if the Mac app returns. |
-| `docs/CODEX-UPDATE-PIPELINE.md` (other branch) | **Folded in** as described in section 10. Its safety rules survive: no model writes canon, human gates, audience receipts. |
-| `pipeline/` | **New.** The `scribe` CLI, its tests and fixtures. |
+| `SessionScribe/` (SwiftUI) | **Kept and rebuilt** as the hub client. The navigation shell and the health components are reused; the recorder models and views are retired. |
+| `SessionScribeTests/` | Kept. New view-model tests run against a mock hub client, following the existing mock-service pattern. |
+| `hub/` (new, this repo) | The `scribe-hub` service, its tests, and `campaign.yaml.example`. |
+| `DAVECaptureSpike/` | **Parked**, kept for reference. |
+| `docs/SessionScribe-MVP.md` | **Superseded** for recording. Its archive principles carry over. |
+| `docs/FOUNDRY-PUBLISHING-PLAN.md` | **Rules kept.** The client moves into the hub. The Mac app's ATS and entitlement step now applies to the hub connection instead. |
+| `docs/CODEX-UPDATE-PIPELINE.md` (other branch) | **Folded in.** Its safety rules survive; its separate codex store is replaced by the vaults. |
+| `azora-iris` | Player-Iris stays its own repo and container. It gains a GM rules card, and `iris-gm` is added either there or in `hub/` (open question 4). |
+| `azora-homebrew` | Gains the structured-proposal output in its Session Ingestor contract, plus a `CLAUDE.md` that imports `AGENTS.md`. Pushing to it from Claude sessions needs the Claude GitHub App installed on it. |
 
 ---
 
 ## 12. Open questions for Nate
 
-1. **What produced the transcripts for sessions 1–59?** They're in speaker-block format with no timestamps, for example `_INBOX/Archived-After-Ingest.zip` → `session 58.ingested-2026-06-02.txt`. If that tool is still available, R0 has a baseline to beat.
-2. **Do you still have a recent Craig export?** R0 is fastest with one in hand.
-3. **Foundry journal scope:** a player codex (world tier plus PC tiers), session recaps, or both? Do you also want GM-only in-play reference entries in Foundry, which would be the one exception to "S6 never publishes `gm`"?
-4. **Where should the session archive (audio) live:** an atomsk share such as `data` or `work`, or on the MacBook?
-5. **Should Hermes run the pipeline eventually,** or do you prefer to run `scribe` yourself from the Mac?
+1. **What produced the transcripts for sessions 1–59?** This is the quality bar for H0.
+2. **Do you have a recent Craig export** for the trial?
+3. **Foundry scope:** a player codex, session recaps, or both? Any GM-only in-play entries?
+4. **Where does GM-Iris's code live:** in `azora-iris`, sharing the persona files, or in this repo's `hub/`, keeping Player-Iris's repo purely player-side? Recommendation: `hub/`, with the persona card vendored in, so the player bot's repo never contains DM-side code.
+5. **Should GM-Iris replace Futaba** (Hermes) for DM-side Azora questions, or live alongside her? Today Futaba owns the DM-side index and daily vault work.
+6. **Player-Iris's DeepSeek fallback:** keep it, switch it to a subscription CLI, or have her say "I'm resting" when naota is gaming?
