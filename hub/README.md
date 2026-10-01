@@ -50,4 +50,4 @@ uv venv -p 3.12 .venv && uv pip install -p .venv -e ".[dev]" -e mac_worker
 Changed an API shape? Run `.venv/bin/python tools/make_app_fixtures.py`: it regenerates
 `SessionScribeTests/HubFixtures.swift` from real hub responses, and the app tests decode them.
 
-Deploy: see `compose.example.yaml`.
+Deploy: follow [DEPLOY.md](DEPLOY.md) (uses `compose.example.yaml`).
