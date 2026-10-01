@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 2026-10-01 |
-| **Status** | Proposal for Nate's approval. Nothing here is built. |
+| **Status** | Decisions approved by Nate 2026-10-01: S2 on the Mac, GPU proxy in the hub, pairing-code auth. Nothing here is built. |
 | **Amends** | `docs/REBUILD-SPEC.md` (revision 4): §3.3, §6, §10, §11, §12 |
 
 Three proposals (§2–§4), plus what verification found that the spec got wrong (§1). Each proposal ends with the decisions it needs.
@@ -59,7 +59,7 @@ The counts are a proxy, not a hand-graded score; spot checks of the added names 
 
 `iris-bot` never joins `azora`, so it cannot reach the hub's API or the DM retriever except through the one gated retriever route (H5).
 
-**Decisions**
+**Decisions (approved 2026-10-01: Mac worker; GPU proxy in the hub)**
 1. **S2 location.** Mac worker (recommended: tested, 6 min per DM track, Mac must be awake) **or** naota (always on, untested, Whisper on ROCm still to set up, shares the GPU with Iris).
 2. **GPU proxy in the hub** for Iris's local model (recommended) or keep Iris talking to naota directly with only the in-bot lock.
 
@@ -110,11 +110,11 @@ hub/
 - **Logging.** The hub logs a token's id prefix only. A test asserts no full token or code appears in logs.
 - **Migration.** Once the hub owns Foundry (H4), the app deletes its existing `foundry-sidecar` Keychain item; the app then holds the hub token and nothing else (§3.1).
 
-**Decision 3.** Approve pairing codes + device tokens + Tailscale identity check, **or** keep it simpler with a token you paste once (no pairing step; the token passes through your clipboard).
+**Decision 3 (approved 2026-10-01: pairing codes).** Approve pairing codes + device tokens + Tailscale identity check, **or** keep it simpler with a token you paste once (no pairing step; the token passes through your clipboard).
 
 ---
 
-## 5. Spec edits if approved
+## 5. Spec edits (applied in this PR)
 
 - §3.3: S2 default becomes the chosen location from decision 1, with the trial recipe.
 - §6: add `POST /auth/pair`, `GET /auth/devices`, `DELETE /auth/devices/:id`, and the internal GPU proxy route.
