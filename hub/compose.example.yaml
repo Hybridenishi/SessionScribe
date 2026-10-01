@@ -1,0 +1,44 @@
+# Example only. The real compose file lives on atomsk, never in git.
+# Secrets are not set here: tokens live (hashed) in /data/hub.sqlite3, and the GitHub deploy key is a
+# 0600 file in the ssh volume.
+services:
+  scribe-hub:
+    build: .
+    image: scribe-hub:dev
+    container_name: scribe-hub
+    restart: unless-stopped
+    environment:
+      SCRIBE_DATA_DIR: /data
+      SCRIBE_DM_VAULT: /vaults/Azora-DM                 # the hub's OWN clone, not /mnt/user/vaults
+      SCRIBE_TAILSCALE_LOGIN: "<nate's tailnet login>"  # what tailscale serve puts in Tailscale-User-Login
+      SCRIBE_NAOTA_LLM_BASE: http://192.168.7.59:8080
+      SCRIBE_PUSH_BRANCHES: "false"                     # true once the deploy key is in place
+      SCRIBE_MAIN_ALLOWED_CIDRS: 172.30.10.0/24         # the azora network (tailscale serve arrives here)
+      SCRIBE_GPU_ALLOWED_CIDRS: 172.30.11.0/24          # the azora-iris network
+    volumes:
+      - /mnt/user/appdata/scribe-hub/data:/data
+      - /mnt/user/appdata/scribe-hub/vaults:/vaults
+      - /mnt/user/appdata/scribe-hub/ssh:/home/scribe/.ssh:ro
+    ports:
+      - "127.0.0.1:8780:8780"     # main API: loopback only, published to the tailnet by tailscale serve
+                                  # 8781 (GPU queue) is NOT published; iris-bot reaches it on azora-iris
+    networks:
+      azora: {}
+      azora-iris: {}
+
+networks:
+  azora:
+    name: azora
+    ipam:
+      config: [{subnet: 172.30.10.0/24}]
+  azora-iris:
+    name: azora-iris
+    ipam:
+      config: [{subnet: 172.30.11.0/24}]
+
+# After `docker compose up -d`:
+#   tailscale serve --bg --https=8443 http://127.0.0.1:8780    (443 is open-webui's)
+#   docker exec -it scribe-hub scribe-hub pair --device "Nate's MacBook Pro"
+#   docker exec scribe-hub scribe-hub token --scope worker --name mac-worker --out /data/mac-worker.token
+#   docker exec scribe-hub scribe-hub token --scope gpu --name iris-bot --out /data/iris-gpu.token
+# iris-bot: join the azora-iris network, IRIS_LLM_BASE=http://scribe-hub:8781, and send the gpu token.

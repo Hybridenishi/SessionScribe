@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Copy to ~/Library/LaunchAgents/, fix the paths, then:
+     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.natedavis.scribe-worker.plist
+     The token file must be mode 0600 and must not live in a git checkout. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.natedavis.scribe-worker</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/nate/.local/share/scribe-worker/.venv/bin/scribe-worker</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SCRIBE_HUB_URL</key><string>https://atomsk.humpback-koi.ts.net:8443</string>
+    <key>SCRIBE_WORKER_TOKEN</key><string>/Users/nate/.config/scribe-worker/token</string>
+    <key>SCRIBE_WHISPER_MODEL</key><string>/Users/nate/.omlx/models/whisper-large-v3-turbo</string>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ProcessType</key><string>Background</string>
+  <key>StandardOutPath</key><string>/Users/nate/Library/Logs/scribe-worker.log</string>
+  <key>StandardErrorPath</key><string>/Users/nate/Library/Logs/scribe-worker.log</string>
+</dict>
+</plist>

@@ -1,0 +1,18 @@
+# Who each Craig track is. The real file lives at /data/campaign.yaml on atomsk (or edit it in the
+# app's Settings). Match by Discord user id first (it never changes), username second.
+speakers:
+  - label: Gamemaster/DM          # "Player/Character", as the vault's transcripts use
+    role: dm
+    discord_id: "100000000000000001"
+    usernames: [gm_username]
+  - label: Pat/Alpha
+    role: player
+    pc: alpha
+    discord_id: "100000000000000002"
+    usernames: [pat_username, pat_old_username]
+
+# Given to Whisper as a prompt for every chunk. Write names into plain sentences; a bare
+# "Names: a, b, c" list makes Whisper echo the list into silences (Addendum 1 trial).
+vocabulary_prompt: >
+  A Dungeons and Dragons game in the world of Example. Alpha and Beta talk with the innkeeper
+  about the Silver Guild.

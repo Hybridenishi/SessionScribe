@@ -1,21 +1,31 @@
 import SwiftUI
 
 struct HealthListView: View {
-    let health: [ServiceHealth]
+    let rows: [HealthRow]
+    var title = "Health"
+
+    init(rows: [HealthRow], title: String = "Health") {
+        self.rows = rows
+        self.title = title
+    }
+
+    init(health: [ServiceHealth]) {
+        self.init(rows: health.map { HealthRow(name: $0.kind.displayName, status: $0.status, detail: $0.detail) })
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Health")
+            Text(title)
                 .font(.headline)
 
-            ForEach(health) { item in
+            ForEach(rows) { item in
                 HStack(spacing: 10) {
                     Image(systemName: symbol(for: item.status))
                         .foregroundStyle(color(for: item.status))
                         .frame(width: 18)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(item.kind.displayName)
+                        Text(item.name)
                             .font(.body.weight(.medium))
                         Text(item.detail)
                             .font(.caption)

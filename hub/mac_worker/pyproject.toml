@@ -1,0 +1,16 @@
+[project]
+name = "scribe-worker"
+version = "0.1.0"
+description = "Azora Hub S2 transcription worker for the Mac (Whisper large-v3-turbo on MLX)."
+requires-python = ">=3.11"
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+mlx = ["mlx-audio>=0.4"]
+
+[project.scripts]
+scribe-worker = "scribe_worker.main:main"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
