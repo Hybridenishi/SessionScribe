@@ -9,10 +9,6 @@ struct HealthListView: View {
         self.title = title
     }
 
-    init(health: [ServiceHealth]) {
-        self.init(rows: health.map { HealthRow(name: $0.kind.displayName, status: $0.status, detail: $0.detail) })
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
@@ -70,7 +66,12 @@ struct HealthListView: View {
 }
 
 #Preview {
-    HealthListView(health: PreviewFixture.health)
+    HealthListView(rows: [
+        HealthRow(name: "Hub", status: .healthy, detail: "Connected"),
+        HealthRow(name: "naota GPU", status: .degraded, detail: "Busy for 40 s, 3 waiting"),
+        HealthRow(name: "Mac worker", status: .failed, detail: "Last seen 2 d ago"),
+        HealthRow(name: "Foundry", status: .inactive, detail: "Arrives in H4")
+    ])
         .padding()
         .frame(width: 320)
 }

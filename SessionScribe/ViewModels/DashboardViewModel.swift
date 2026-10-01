@@ -1,15 +1,6 @@
 import Foundation
 import Observation
 
-/// One row in the health list: a name, a status and a short detail.
-struct HealthRow: Identifiable, Equatable, Sendable {
-    let name: String
-    let status: ServiceHealth.Status
-    let detail: String
-
-    var id: String { name }
-}
-
 @MainActor
 @Observable
 final class DashboardViewModel {

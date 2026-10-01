@@ -1,5 +1,7 @@
 # Foundry publishing: implementation plan
 
+> **Note (2026-10-01):** the rules in this plan are kept, but per REBUILD-SPEC §11 the Foundry client moves into the hub (H4). The app code it points to as a pattern (`SidecarClient`, `LiveSessionView`, `LiveSessionViewModel`) was the recorder, which has been removed.
+
 **Audience:** an engineer (or Codex) picking up SessionScribe next. This plan assumes no memory of how it was scoped.
 
 ## What this plan is, and isn't
