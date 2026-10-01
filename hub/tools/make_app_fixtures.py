@@ -15,8 +15,6 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "tests"))
 
-import pytest  # noqa: E402
-
 OUT = HERE.parent.parent / "SessionScribeTests" / "HubFixtures.swift"
 
 
@@ -45,8 +43,9 @@ def main() -> None:
         c.drain(hub)
         while (r := client.post("/worker/claim", headers=w)).status_code == 200:
             job = r.json()
+            start = 1000 * job["track"]
             client.post(f"/worker/jobs/{job['job']}/result", headers=w, json={
-                "utterances": [{"start_ms": 1000 * job["track"], "end_ms": 1000 * job["track"] + 800,
+                "utterances": [{"start_ms": start, "end_ms": start + 800,
                                 "text": f"Line from track {job['track']}.", "confidence": 0.9}],
                 "engine": {"engine": "fixture"}})
         c.drain(hub)
@@ -78,5 +77,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    pytest.importorskip  # keep pytest imported for conftest's fixtures
     main()

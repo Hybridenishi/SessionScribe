@@ -80,3 +80,12 @@ def test_duplicate_track_numbers_are_refused(tmp_path):
     zp.write_bytes(craig_zip([(1, "gm_user", "1001")], extra={"1-gm.user.wav": wav_bytes()}))
     with pytest.raises(craig.CraigError, match="share a track number"):
         craig.extract(zp, tmp_path / "s")
+
+
+def test_parse_info_reads_the_display_name_format():
+    ids, rec, start = craig.parse_info(
+        "Recording XYZ\n\nRequester:\tGm (gm_user#0) (1001)\nStart time:\t2025-04-06T01:09:26Z\n\n"
+        "Tracks:\n\tMisty Jelly (pat_user#0) (1002)\n\tLe/Leona (sam.user_x#0) (1003)\n"
+        "\tgm_user#0 (1001)\n")
+    assert ids == {"pat_user": "1002", "sam.user_x": "1003", "gm_user": "1001"}
+    assert start == "2025-04-06T01:09:26Z"

@@ -14,7 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 AUDIO_RE = re.compile(r"^(\d+)-(.+?)(?:_\d+)?\.(aac|flac|ogg|opus|m4a|wav|mp3)$", re.I)
-INFO_TRACK_RE = re.compile(r"^\s*([^\s#()]+)(?:#\d+)?\s*\((\d+)\)\s*$")
+# Track lines come in two shapes:  "\tuser#0 (123)"  and, in newer exports,
+# "\tDisplay Name (user#0) (123)". Either way the username is the token before "#N".
+INFO_TRACK_RE = re.compile(r"(?:^\s*|\()([^\s#()]+)#\d+\)?\s*\((\d+)\)\s*$")
 MAX_UNCOMPRESSED = 12 * 1024**3     # a 4-hour, 8-track FLAC export is ~3 GB
 
 
@@ -48,7 +50,7 @@ def parse_info(text: str) -> tuple[dict[str, str], str | None, str | None]:
         elif line.strip().lower() == "tracks:":
             in_tracks = True
         elif in_tracks:
-            m = INFO_TRACK_RE.match(line)
+            m = INFO_TRACK_RE.search(line)
             if m:
                 ids[m.group(1).lower()] = m.group(2)
             elif line.strip():
