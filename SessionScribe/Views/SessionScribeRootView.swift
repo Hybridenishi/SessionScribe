@@ -1,38 +1,49 @@
 import SwiftUI
 
 enum WorkspaceSection: String, CaseIterable, Identifiable {
-    case campaigns
+    case dashboard
     case sessions
-    case reviewInbox
+    case review
+    case settings
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .campaigns:
-            "Campaigns"
+        case .dashboard:
+            "Dashboard"
         case .sessions:
             "Sessions"
-        case .reviewInbox:
-            "Review Inbox"
+        case .review:
+            "Review"
+        case .settings:
+            "Settings"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .campaigns:
-            "map"
+        case .dashboard:
+            "gauge.with.dots.needle.33percent"
         case .sessions:
-            "waveform.and.mic"
-        case .reviewInbox:
-            "tray.full"
+            "waveform"
+        case .review:
+            "rectangle.stack.badge.person.crop"
+        case .settings:
+            "gearshape"
         }
     }
 }
 
 struct SessionScribeRootView: View {
-    @State private var selection: WorkspaceSection? = .sessions
-    @State private var liveSessionViewModel = LiveSessionViewModel()
+    @State private var selection: WorkspaceSection? = .dashboard
+    @State private var connection: HubConnection
+    @State private var player: any AudioClipPlaying
+
+    init(connection: HubConnection = HubConnection(), player: any AudioClipPlaying = AVAudioClipPlayer()) {
+        _connection = State(initialValue: connection)
+        _player = State(initialValue: player)
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -42,20 +53,37 @@ struct SessionScribeRootView: View {
             }
             .navigationTitle("SessionScribe")
         } detail: {
-            switch selection ?? .sessions {
-            case .campaigns:
+            detail(for: selection ?? .dashboard)
+        }
+        .onAppear {
+            if connection.credentials == nil { selection = .settings }
+        }
+    }
+
+    @ViewBuilder
+    private func detail(for section: WorkspaceSection) -> some View {
+        switch section {
+        case .settings:
+            SettingsView(viewModel: SettingsViewModel(connection: connection), connection: connection)
+        case .review:
+            PlaceholderWorkspaceView(
+                title: "Review",
+                systemImage: "rectangle.stack.badge.person.crop",
+                message: "Proposed vault changes arrive here as before/after cards in H2."
+            )
+        case .dashboard, .sessions:
+            if connection.isPaired {
+                if section == .dashboard {
+                    DashboardView(viewModel: DashboardViewModel(connection: connection))
+                } else {
+                    SessionsView(viewModel: SessionsViewModel(connection: connection),
+                                 connection: connection, player: player)
+                }
+            } else {
                 PlaceholderWorkspaceView(
-                    title: "Campaigns",
-                    systemImage: "map",
-                    message: "Campaign management will collect canonical notes after recorder reliability is proven."
-                )
-            case .sessions:
-                LiveSessionView(viewModel: liveSessionViewModel)
-            case .reviewInbox:
-                PlaceholderWorkspaceView(
-                    title: "Review Inbox",
-                    systemImage: "tray.full",
-                    message: "Extracted transcript changes will land here for human review before they update campaign notes."
+                    title: "Not connected",
+                    systemImage: "network.slash",
+                    message: "Pair this Mac with the hub in Settings."
                 )
             }
         }
@@ -73,7 +101,13 @@ private struct PlaceholderWorkspaceView: View {
     }
 }
 
-#Preview {
-    SessionScribeRootView()
+#Preview("Paired") {
+    SessionScribeRootView(connection: PreviewHub.connection(), player: PreviewHub.Player())
+        .frame(width: 1_100, height: 720)
+}
+
+#Preview("Unpaired") {
+    SessionScribeRootView(connection: HubConnection(store: InMemoryHubCredentialStore()),
+                          player: PreviewHub.Player())
         .frame(width: 1_100, height: 720)
 }
