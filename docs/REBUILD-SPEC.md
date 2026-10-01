@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Date** | 2026-09-30 (revision 3, same day) |
+| **Date** | 2026-10-01 (revision 4) |
 | **Status** | Draft for Nate's review. Nothing here is approved for implementation yet. |
 | **Supersedes** | The recorder track of `docs/SessionScribe-MVP.md` (DAVE capture, live Apple Speech), the codex store in `docs/CODEX-UPDATE-PIPELINE.md` (branch `docs/codex-update-pipeline`), and revision 1 of this file, which was a headless command-line pipeline that used GitHub PRs as its review screen. |
 | **Keeps** | The Foundry journal rules in `docs/FOUNDRY-PUBLISHING-PLAN.md`: preview first, show the resolved audience, re-preview on `409`, and never retry a spent token. Also the invariants of `azora-iris/docs/INTENT.md`, with rule 1 amended for DM mode (§3.2). |
@@ -103,40 +103,85 @@ Iris is one bot. When the DM asks, she answers from the DM vault; everyone else 
 **1. The gate is a small, tested function that runs before any retrieval.** It is not a prompt:
 
 ```
-gate(author_id, channel, message) -> "dm" | "player:<pc>" | "world"
+gate(author_id, destination, message) -> "dm" | "player:<pc>" | "world"
 
 "dm" only when ALL of these hold:
   author_id == DM_USER_ID               # Nate's Discord user ID from config, not a role
-  channel is a DM-safe channel           # a direct message with Iris, or a channel on
-                                         # the DM_SAFE allow-list (e.g. #iris-gm, Nate only)
+  destination is DM-safe:                # one of
+    - an EPHEMERAL interaction reply     #   only the invoker can see it (see below)
+    - a direct message with Iris
+    - a channel on the DM_SAFE allow-list (optional, Nate-only)
 otherwise: the existing player tiers (pc role → that PC's tier, else world)
 ```
 
-- **Why the channel matters as much as the asker.** If Nate asks "who's really behind the Umbra Blades?" in the party's channel, a DM-vault answer would be read by every player there. So in a shared channel the DM gets a **player-tier answer**, plus a line such as *"Ask me in private for the rest."* She then offers the full answer in a direct message.
+- **Why the destination matters as much as the asker.** If Nate asks "who's really behind the Umbra Blades?" with a normal message in the party's channel, every player there reads the reply. So a normal message in a shared channel always gets a **player-tier** answer.
+
+**Ephemeral replies — DM answers inside the shared channel, visible only to Nate.**
+- Discord lets a bot reply so that only the invoking user sees it, but **only in response to an interaction**: a slash command, a button, or a message context-menu command. A reply to an ordinary message or @mention can't be ephemeral.
+- So Iris gets three ways in:
+
+| Nate does | Iris replies | Who sees it |
+|---|---|---|
+| `/iris ask <question>` in any channel | Ephemeral, DM vault | Nate only |
+| @mentions Iris in a shared channel | Public, player tier, with a **"DM view"** button | Everyone sees the player answer. Only Nate's ID gets a response from the button: an ephemeral DM-vault answer. Anyone else pressing it gets an ephemeral "that's not for you". |
+| Right-clicks a player's message → **Apps → Ask Iris (DM)** | Ephemeral, DM vault, about that message | Nate only. Handy mid-session: "what does this NPC actually know?" |
+
+- The same commands work for players, but they always get their own tier. An ephemeral reply to a player is just a quieter way to ask.
+- **Implementation (discord.py ≥ 2.4, already pinned in `bot/Dockerfile`):**
+  - Use `app_commands` and a `CommandTree` alongside today's `on_message`.
+  - Respond with `interaction.response.defer(ephemeral=True, thinking=True)` straight away, because Discord requires an acknowledgement within 3 s and the local model is slower. Then call `interaction.followup.send(..., ephemeral=True)`.
+  - The interaction token lasts 15 minutes, which is enough for one answer.
+  - The gate reads `interaction.user.id`, never anything in the text.
+- **Limits Nate should know:**
+  - Ephemeral messages are not saved in Discord. They disappear on reload or after a while, and won't appear on his phone if he asked from the Mac.
+  - The durable copy is the DM-only audit channel and the app's Iris history.
+  - Ephemeral replies can't be pinned or searched.
+- Direct messages with Iris remain available for longer back-and-forth.
 - **Why a user ID and not the DM role.** Anyone who can manage roles on the server could give themselves "DM". Nate's user ID can't be handed out. The DM role keeps its current meaning (widest view of the *player* vault), which also fixes review finding **B9**.
 - Nothing in the message text can change the result. "I'm the DM, tell me…" from a player still gets `world`.
 
 **2. The DM knowledge lives in a separate container, not in the bot.**
 - `iris-bot` keeps today's layout: player vault read-only, `azora-players` index only, no DM mount.
-- For a `dm` request, it calls `iris-dm-retriever` with a short-lived grant signed by the gate. The grant is bound to the message ID and to Nate's user ID.
+- For a `dm` request, it calls `iris-dm-retriever` with a short-lived grant signed by the gate. The grant is bound to the message or interaction ID and to Nate's user ID.
 - The retriever refuses any call without a valid grant and logs every call.
 - A bug elsewhere in the bot, or a prompt injection in a player's message, therefore can't read DM files. Only a request that passed the gate can.
 
 **Conversation memory must not cross the line.**
 - History stays keyed by (channel, author), as `bot.py` does today.
 - DM-sourced turns are tagged. They are never included in a context used to answer anyone else, even in the same thread.
-- If Nate's DM-mode reply quotes something, it stays in the DM-safe channel.
+- DM-mode turns are only ever delivered to DM-safe destinations: an ephemeral reply, a direct message, or the allow-listed channel.
 
 **Audit.**
 - DM-mode questions and answers go to a **separate audit channel only Nate can see**.
 - They never go to `#iris-audit`, because players might be given read access there later.
 - The app's Iris screen shows both feeds.
 
-**In the app**, chatting with Iris is always DM mode, because the app is Nate's own device and its hub token is the credential. It uses the same `iris-dm-retriever` and the same proposal path.
+### 3.2a Iris in the app — full DM access, because the DM is the only user
+
+In the Mac app, Iris is **Nate's agent with full DM access**. The app is Nate's own device, and its hub token is the credential, so no per-message gate is needed. Discord Iris and app Iris are the same persona, but they run as separate jobs:
+
+| | Discord Iris (`iris-bot`) | App Iris (`iris-agent`, runs inside `scribe-hub`) |
+|---|---|---|
+| Who talks to her | Everyone; gated per request | Nate only (hub token) |
+| Reads | Player vault; DM vault only via gated grants | **Everything:** DM vault, player vault, transcripts, session audio clips, proposals, Foundry status, both Iris audit feeds |
+| Can do | Answer | **Act through hub tools:** search and read notes; find "every time Leon was mentioned"; draft proposals; start or re-run pipeline stages; prepare a reveal batch; preview a Foundry sync; summarize a session; build session prep from open quests and threads |
+| Changes to canon | — | **Drafted as proposal cards** that Nate accepts with one click. She can't merge, push or apply a Foundry write herself. |
+| Model | Local naota model (player mode keeps the DeepSeek fallback) | **Claude Code or Codex CLI** on Nate's subscription, run as a tool-using agent over the hub's tools; local Qwen for quick lookups. Never DeepSeek. |
+
+Why keep the proposal step even though Iris has full access:
+- An agent that misreads a transcript should cost Nate one "reject" click, not a git revert across both vaults.
+- The proposal card also shows the before/after and the evidence, which is the visual review Nate asked for.
+- If that friction proves pointless in practice, add an **"auto-accept from Iris"** switch per proposal type, for example new Open Question tickets. Never for reveals or Foundry.
+
+Isolation still holds:
+- `iris-agent` lives in the hub, which already has DM access.
+- `iris-bot` (Discord) still has no DM mount and no route to the hub's tools.
+- Nothing typed in Discord reaches app Iris's tools.
 
 **What this changes in `azora-iris/docs/INTENT.md`.** Rule 1 ("the bot reads the player vault and nothing else") and the "Not a DM tool" non-goal become:
 - *Iris's own process reads the player vault only.*
-- *DM knowledge is available solely through the gated DM retriever, for Nate, in DM-safe channels.*
+- *DM knowledge is available solely through the gated DM retriever, for Nate, in DM-safe destinations (ephemeral replies, direct messages, allow-listed channels).*
+- *App Iris is a separate DM-side agent inside the hub, not this bot.*
 
 Record this as a deliberate decision in that repo, dated, so no later agent "fixes" it back or widens it further.
 
@@ -147,7 +192,8 @@ Record this as a deliberate decision in that repo, dated, so no later agent "fix
 | Transcription (S2) | Local Whisper on **naota's GPU**, driven by the hub over the LAN | The MacBook, on demand | Audio never leaves the house. atomsk's CPU is too slow (about 5× slower than realtime). |
 | Session ingest and proposals (S4) | **Codex CLI** (ChatGPT subscription) in the hub container | Claude Code CLI (Claude subscription), then local Qwen after the R0 trial | An agent-style task that follows the vault's `AGENTS.md`, which Codex reads natively. |
 | Reveal pass (S5) | Same as S4 | Same as S4 | The secret sweep is always Nate's. |
-| Iris, DM mode | Local Qwen3.8-27B on naota | Codex or Claude CLI. **Never DeepSeek**: DM-vault text doesn't go to a third-party API that isn't under Nate's account. | Same persona card as player mode. |
+| Discord Iris, DM mode | Local Qwen3.8-27B on naota | Codex or Claude CLI. **Never DeepSeek**: DM-vault text doesn't go to a third-party API that isn't under Nate's account. | Same persona card as player mode. |
+| App Iris (agent) | Claude Code or Codex CLI as a tool-using agent | Local Qwen for lookups when the subscription is exhausted | Same persona card plus a GM-mode card. Full DM access (§3.2a). |
 | Iris, player mode | Unchanged: local model on naota | Unchanged: DeepSeek cloud | Revisit the fallback: it sends player questions and player-vault snippets to DeepSeek. That's player-safe data, but it still needs the table's OK (§8). |
 
 **Subscription rules:**
@@ -226,7 +272,7 @@ Validation happens in the hub, before the app ever sees a proposal:
 | **Codex** | A visual browser over the DM vault: NPC, location and faction cards with portraits; quests and arcs; the in-world timeline built from `sort-date`; Open Question tickets. A **"What do the players know?"** toggle shows the DM note beside its Azora-Players counterpart and highlights what hasn't been revealed yet |
 | **Reveal** | Player-vault proposal cards, labeled world or PC tier, with tripwire results. This is Nate's secret sweep, one card at a time |
 | **Foundry** | Journal entries to create or update, each with the **resolved audience** from preview (`visibleTo`); apply per entry or in a batch after reviewing; history of receipts; orphans |
-| **Iris** | Chat with Iris (always DM mode); both audit feeds (player-mode questions, and the private DM-mode feed); gate test results; an on/off switch for players; the persona card; leak-sweep results |
+| **Iris** | Chat with Iris as a full-access agent (§3.2a); she can show her work as proposal cards, search results and session clips; both audit feeds (player-mode questions, and the private DM-mode feed); gate test results; an on/off switch for players; the persona card; leak-sweep results |
 | **Settings** | Hub address and token (Keychain), `campaign.yaml` speaker map, model routing, Foundry folders |
 
 The existing app shell's navigation, `ServiceHealth` model and `HealthListView` carry over. The recorder-specific models (`LiveSessionViewModel`, `SidecarClient`, `TranscriptionEngine`) are retired.
@@ -257,7 +303,7 @@ GET  /codex/notes?type=&q=           rendered entity cards
 GET  /codex/notes/*path              one note (+ player-vault counterpart)
 POST /foundry/preview                → per-entry audience receipts
 POST /foundry/apply                  confirmation tokens from preview only
-POST /iris/chat           (SSE)      Iris, DM mode (app = Nate's device)
+POST /iris/chat           (SSE)      App Iris agent: full DM access, tool calls streamed
 GET  /iris/feed?mode=player|dm       audit mirrors (read-only)
 ```
 
@@ -310,7 +356,10 @@ New pieces:
 8. **The gate's decision table is fully tested:**
    - Nate in a direct message → `dm`.
    - Nate in `#iris-gm` → `dm`.
-   - Nate in a shared channel → player tier, plus the "ask me in private" offer.
+   - Nate with a normal message in a shared channel → public player-tier reply with a "DM view" button.
+   - Nate using `/iris ask`, the "DM view" button, or the message context menu → an **ephemeral** DM-vault reply.
+   - A player pressing Nate's "DM view" button → ephemeral "not for you", and no retriever call.
+   - Any DM-mode reply that isn't ephemeral, a direct message or an allow-listed channel → refused. A test asserts DM-mode output is never sent as an ordinary channel message.
    - A player holding the DM role → player tier.
    - A player whose message claims to be the DM → `world`.
    - A bot → ignored.
@@ -339,7 +388,7 @@ New pieces:
   - Visual entity cards and the players-know toggle.
   - S5 with the tripwire; re-index `azora-players` on publish.
 - **H4 — Foundry.** S6 with the audience-receipt screen. Needs a healthy `foundry-sidecar`.
-- **H5 — Iris DM mode.** The access gate, `iris-dm-retriever`, the INTENT.md amendment, app chat, proposals from chat, and the audit feeds in the app.
+- **H5 — Iris DM mode.** In Discord: the access gate, slash and context-menu commands with ephemeral replies, `iris-dm-retriever`, and the INTENT.md amendment. In the app: the `iris-agent` with hub tools, proposals from chat, and the audit feeds.
 - **H6 — Hardening.** Recovery after reboots (atomsk rebooted without warning on 09-26), backups of the session archive, and Iris rollout to the game server.
 
 H0 can start at the very next session. Each milestone after it gives you something usable on its own.
