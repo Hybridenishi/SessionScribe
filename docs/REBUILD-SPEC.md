@@ -15,7 +15,7 @@
 
 - **The recorder track is stuck.** Milestone 0 (DAVE capture) has not passed since the July 22 tests (`DAVECaptureSpike/LIVE-TEST-FINDINGS.md`). Craig replaces it.
 - **Most of what you need to keep track of the campaign already exists; it just isn't connected or visible:**
-  - **Azora-DM** (`Hybridenishi/azora-homebrew`) holds 561 notes and 59 ingested sessions. It already has:
+  - **Azora-DM** (`Hybridenishi/Azora-Dm`, formerly `azora-homebrew`) holds 561 notes and 59 ingested sessions. It already has:
     - a Session Ingestor agent and a Downstream Update Plan with DM approval
     - Open Question tickets for continuity conflicts
     - `> [!warning]- DM Only` callouts and `permanent-secrets` for secrets
@@ -189,7 +189,7 @@ Record this as a deliberate decision in that repo, dated, so no later agent "fix
 
 | Job | Default | Fallback | Notes |
 |---|---|---|---|
-| Transcription (S2) | Local Whisper on **naota's GPU**, driven by the hub over the LAN | The MacBook, on demand | Audio never leaves the house. atomsk's CPU is too slow (about 5× slower than realtime). |
+| Transcription (S2) | Whisper large-v3-turbo (MLX) on **the Mac**, as a worker that pulls jobs from the hub; silence skipped, campaign names as a prose prompt per chunk, loop filter (Addendum 1) | naota GPU, once Whisper is set up there | Audio never leaves the house. atomsk's CPU is too slow (about 5× slower than realtime). About 6 min per 2 h 20 m track on the M5 Pro. |
 | Session ingest and proposals (S4) | **Codex CLI** (ChatGPT subscription) in the hub container | Claude Code CLI (Claude subscription), then local Qwen after the R0 trial | An agent-style task that follows the vault's `AGENTS.md`, which Codex reads natively. |
 | Reveal pass (S5) | Same as S4 | Same as S4 | The secret sweep is always Nate's. |
 | Discord Iris, DM mode | Local Qwen3.8-27B on naota | Codex or Claude CLI. **Never DeepSeek**: DM-vault text doesn't go to a third-party API that isn't under Nate's account. | Same persona card as player mode. |
@@ -201,7 +201,7 @@ Record this as a deliberate decision in that repo, dated, so no later agent "fix
 - Never extract or proxy their tokens.
 - Check the current plan terms before relying on this.
 - Headless Claude draws down plan usage about 1.7× faster than the interactive app (Second-Brain research note, 2026-09-22).
-- One naota GPU job at a time, as Iris's invariant 6 already requires. The hub owns a **single GPU queue** that Whisper and Iris (both modes) all go through. That also fixes Iris review finding **B3**.
+- One naota GPU job at a time, as Iris's invariant 6 already requires. The hub owns a **single GPU queue**, exposed to Iris as an OpenAI-compatible proxy in front of naota's llama-server, that every naota job goes through (Iris in both modes, and Whisper if it ever falls back to naota). Iris's in-bot lock (azora-iris PR #25) stays as a second guard.
 
 ---
 
@@ -303,6 +303,10 @@ GET  /codex/notes?type=&q=           rendered entity cards
 GET  /codex/notes/*path              one note (+ player-vault counterpart)
 POST /foundry/preview                → per-entry audience receipts
 POST /foundry/apply                  confirmation tokens from preview only
+POST /auth/pair                      one-time pairing code → device token (Addendum 1 §4)
+GET  /auth/devices                   paired devices
+DELETE /auth/devices/:id             revoke a device
+POST /gpu/v1/chat/completions        internal GPU-queue proxy to naota (iris-bot only, own token)
 POST /iris/chat           (SSE)      App Iris agent: full DM access, tool calls streamed
 GET  /iris/feed?mode=player|dm       audit mirrors (read-only)
 ```
@@ -337,6 +341,7 @@ New pieces:
   - transcripts are made locally
   - text excerpts may be processed by OpenAI or Anthropic under Nate's account for the DM-side steps
   - Iris's player-mode fallback sends player questions to DeepSeek (DM mode never uses DeepSeek)
+  - player questions are sent to OpenRouter to be embedded for search (player mode only)
 - Audio never leaves Nate's machines.
 - Transcripts and DM notes never reach Iris's player mode, Azora-Players or Foundry.
 - Credentials (the Discord bot token, the gate's signing key, Foundry `API_KEY`, hub device tokens, the CLI logins) live in `0600` secret files on atomsk and in Keychain on the Mac. They never go in a repo, a log, a proposal or an audit post.
@@ -413,7 +418,7 @@ H0 can start at the very next session. Each milestone after it gives you somethi
 
 ## 12. Open questions for Nate
 
-1. **What produced the transcripts for sessions 1–59?** This is the quality bar for H0.
+1. ~~What produced the transcripts for sessions 1–59?~~ **Answered:** Apple SpeechAnalyzer via `yap` (`scribe.sh`). Whisper with names beat it in the Addendum 1 trial.
 2. **Do you have a recent Craig export** for the trial?
 3. **Foundry scope:** a player codex, session recaps, or both? Any GM-only in-play entries?
 4. **Where does `iris-dm-retriever` live?** Recommendation: this repo's `hub/`, so Iris's own repo holds only the gate and never contains DM-side retrieval code.
