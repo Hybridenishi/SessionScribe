@@ -277,6 +277,8 @@ struct TranscriptionProgressTests {
         #expect(t[4]?.text == "Waiting for the Mac worker")
         #expect(t[5]?.status == .failed && t[5]?.text.contains("mlx crashed") == true)
         #expect(t[2]?.speaker == "P2")
+        #expect(t[2]?.isActive == true && t[3]?.isActive == true)        // both moving
+        #expect([1, 4, 5].allSatisfy { t[$0]?.isActive == false })        // done, waiting, failed
     }
 
     @Test func noReportForTwoMinutesIsFlaggedAsStuck() async {
@@ -285,6 +287,7 @@ struct TranscriptionProgressTests {
         ], nowOffset: 300)
         let track = vm.trackProgress[0]
         #expect(track.status == .degraded)
+        #expect(!track.isActive)                                       // a stalled track doesn't pulse
         #expect(track.text == "No progress for 5 min: is the Mac awake and on Tailscale?")
         #expect(vm.stages.first { $0.id == "s2" }?.detail.contains("no recent progress") == true)
         #expect(vm.stages.first { $0.id == "s2" }?.status == .degraded)
@@ -294,6 +297,7 @@ struct TranscriptionProgressTests {
         let fresh = await viewModel(jobs: [job(1, track: 1, state: "running", updated: Self.t0)], nowOffset: 300)
         #expect(fresh.trackProgress[0].text == "Downloading and preparing audio…")
         #expect(fresh.trackProgress[0].fraction == nil)
+        #expect(fresh.trackProgress[0].isActive)
         let stuck = await viewModel(jobs: [job(1, track: 1, state: "running", updated: Self.t0)], nowOffset: 900)
         #expect(stuck.trackProgress[0].status == .degraded)
     }

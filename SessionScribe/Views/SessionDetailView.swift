@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionDetailView: View {
     @State var viewModel: SessionDetailViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let palette: [Color] = [.blue, .orange, .green, .purple, .pink, .teal, .brown, .indigo]
 
@@ -42,7 +43,14 @@ struct SessionDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(tracks) { t in
                         VStack(alignment: .leading, spacing: 3) {
-                            HStack {
+                            HStack(spacing: 6) {
+                                if t.isActive {
+                                    Image(systemName: "circle.fill")
+                                        .font(.system(size: 7))
+                                        .foregroundStyle(color(for: t.id))
+                                        .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+                                        .accessibilityLabel("Transcribing now")
+                                }
                                 Text(t.speaker).font(.callout.weight(.medium))
                                     .foregroundStyle(color(for: t.id))
                                 Spacer()
