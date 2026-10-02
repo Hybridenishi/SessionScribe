@@ -121,6 +121,13 @@ def s3_stage(hub, job: dict) -> None:
     queue.finish(hub.db, job["id"], result)
     note = None if s.dm_vault else "Transcript ready; no vault clone configured, so not staged"
     set_session(hub.db, n, "ready", note)
+    if s.dm_vault and (s.s4_provider or s.s4_command):
+        queue.enqueue(hub.db, n, "s4", "hub")          # S4 drafts proposals for review
 
 
-HUB_STAGES = {"s1": s1_ingest, "s3": s3_stage}
+def _s4(hub, job):
+    from .s4_propose import s4_propose  # local import: s4 imports archive/vaults, like us
+    s4_propose(hub, job)
+
+
+HUB_STAGES = {"s1": s1_ingest, "s3": s3_stage, "s4": _s4}

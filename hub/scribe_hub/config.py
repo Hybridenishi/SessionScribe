@@ -2,6 +2,7 @@
 (hashed) and the CLI logins live on their own volume."""
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,6 +38,13 @@ class Settings:
     # live in one container.
     main_allowed_cidrs: tuple[str, ...] = ()
     gpu_allowed_cidrs: tuple[str, ...] = ()
+    # S4: which agent CLI drafts proposals ("codex" | "claude"; empty = S4 does not run by itself).
+    s4_provider: str = ""
+    # tests/dev: a custom command, with {prompt} and {dir} filled in
+    s4_command: tuple[str, ...] = ()
+    s4_timeout_s: int = 45 * 60
+    codex_sandbox: str = "workspace-write"
+    claude_token_file: str = ""
     extra: dict = field(default_factory=dict)
 
     @property
@@ -62,4 +70,9 @@ class Settings:
             git_author=os.environ.get("SCRIBE_GIT_AUTHOR", "Scribe Hub <scribe-hub@atomsk.local>"),
             main_allowed_cidrs=_cidrs("SCRIBE_MAIN_ALLOWED_CIDRS"),
             gpu_allowed_cidrs=_cidrs("SCRIBE_GPU_ALLOWED_CIDRS"),
+            s4_provider=os.environ.get("SCRIBE_S4_PROVIDER", ""),
+            s4_command=tuple(json.loads(os.environ.get("SCRIBE_S4_COMMAND", "[]"))),
+            s4_timeout_s=int(os.environ.get("SCRIBE_S4_TIMEOUT_S", str(45 * 60))),
+            codex_sandbox=os.environ.get("SCRIBE_CODEX_SANDBOX", "workspace-write"),
+            claude_token_file=os.environ.get("SCRIBE_CLAUDE_TOKEN_FILE", ""),
         )

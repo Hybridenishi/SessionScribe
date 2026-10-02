@@ -136,6 +136,30 @@ Drop a Craig export (`Session 59 audio` re-zipped is fine) as a **new** session 
 - [ ] Iris answers in `#iris-sandbox`; the Dashboard's GPU row counts the request.
 - **Rollback:** set `IRIS_LLM_BASE` back to `http://192.168.7.59:8080` and recreate. ~30 s.
 
+## 12. H2: sign in the proposal agent (Nate, inside the container)
+
+The hub drafts vault changes with an official agent CLI on Nate's own subscription. Logins live on
+`/data/agents` (the data volume), so they survive restarts and rebuilds. Never copy them anywhere.
+
+- **Codex** (`SCRIBE_S4_PROVIDER: codex`, the default):
+
+```bash
+ssh -t atomsk-lan 'docker exec -it scribe-hub codex login --device-auth'
+```
+
+  Open the link it prints on your Mac and approve. Check: `docker exec scribe-hub codex login status`.
+- **Claude** (`SCRIBE_S4_PROVIDER: claude`): run `claude setup-token` the same way, then save the
+  token it prints to `/mnt/user/appdata/scribe-hub/data/agents/claude-token` (mode 0600, owner
+  1000) and set `SCRIBE_CLAUDE_TOKEN_FILE: /data/agents/claude-token`.
+- If Codex fails with a sandbox error inside Docker, set `SCRIBE_CODEX_SANDBOX: danger-full-access`.
+  The container is the sandbox, and the hub reverts anything the agent edits outside its two output
+  files either way.
+- [ ] In the app, open a staged session and press **Propose changes**. It ends in **Review**, or
+      `blocked` with the exact command to run if the agent isn't signed in.
+
+**Publish** needs the Azora-Dm deploy key to allow writes and `SCRIBE_PUSH_BRANCHES: "true"`.
+Until then, Publish has a dry run that shows exactly which files would change.
+
 ## Rollback (everything)
 
 `docker compose down` in `/mnt/user/appdata/scribe-hub`, `tailscale serve --https=8443 off`.

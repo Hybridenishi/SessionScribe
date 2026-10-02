@@ -12,7 +12,10 @@ services:
       SCRIBE_DM_VAULT: /vaults/Azora-DM                 # the hub's OWN clone, not /mnt/user/vaults
       SCRIBE_TAILSCALE_LOGIN: "<nate's tailnet login>"  # what tailscale serve puts in Tailscale-User-Login
       SCRIBE_NAOTA_LLM_BASE: http://192.168.7.59:8080
-      SCRIBE_PUSH_BRANCHES: "false"                     # true once the deploy key is in place
+      SCRIBE_PUSH_BRANCHES: "false"                     # true once the deploy key can write (Publish)
+      SCRIBE_S4_PROVIDER: codex                         # or claude; empty = S4 never runs by itself
+      # SCRIBE_CODEX_SANDBOX: danger-full-access        # only if Codex's sandbox can't start in Docker
+      # SCRIBE_CLAUDE_TOKEN_FILE: /data/agents/claude-token   # 0600, for SCRIBE_S4_PROVIDER: claude
       # the azora network (published-port traffic arrives from its gateway) + the container's own
       # loopback, which the image's HEALTHCHECK uses; without it the container never goes healthy
       SCRIBE_MAIN_ALLOWED_CIDRS: 172.30.10.0/24,127.0.0.1/32
