@@ -95,11 +95,25 @@ def cancel_open(db: Database, session: int, stage: str) -> int:
     return cur.rowcount
 
 
+NO_AUTO_RETRY = ("s4",)       # agent runs cost subscription usage; a person re-runs them
+
+
 def recover(db: Database) -> int:
-    """After a restart: in-process jobs that were running are re-queued. Leased Mac jobs keep
-    their lease and are reclaimed by `claim` when it runs out."""
-    cur = db.execute("UPDATE jobs SET state = 'queued', updated_at = ? "
-                     "WHERE state = 'running' AND lane = 'hub'", (now(),))
+    """After a restart: in-process jobs that were running are re-queued, except agent runs, which
+    fail so the DM re-runs them from the app. Leased Mac jobs keep their lease and are reclaimed
+    by `claim` when it runs out."""
+    t = now()
+    marks = ",".join("?" * len(NO_AUTO_RETRY))
+    stopped = db.all(f"SELECT id, session, stage FROM jobs WHERE state = 'running' "
+                     f"AND lane = 'hub' AND stage IN ({marks})", NO_AUTO_RETRY)
+    for j in stopped:
+        reason = "interrupted by a hub restart; run it again from the app"
+        db.execute("UPDATE jobs SET state = 'failed', error = ?, lease_until = NULL, "
+                   "updated_at = ? WHERE id = ?", (reason, t, j["id"]))
+        db.execute("UPDATE sessions SET state = 'failed', detail = ? WHERE number = ?",
+                   (f"Proposing was {reason}.", j["session"]))
+    cur = db.execute(f"UPDATE jobs SET state = 'queued', updated_at = ? WHERE state = 'running' "
+                     f"AND lane = 'hub' AND stage NOT IN ({marks})", (t, *NO_AUTO_RETRY))
     return cur.rowcount
 
 

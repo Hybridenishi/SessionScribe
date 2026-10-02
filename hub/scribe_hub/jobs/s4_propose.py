@@ -84,24 +84,36 @@ def _git(repo, *args, **kw):
 
 
 def _changed_paths(repo: Path) -> list[str]:
-    out = _git(repo, "status", "--porcelain", "--untracked-files=all")
-    paths = []
-    for line in out.splitlines():
-        path = line[3:]
-        if " -> " in path:
-            paths.extend(path.split(" -> "))
-        else:
-            paths.append(path)
-    return [p.strip('"') for p in paths if not p.startswith(SCRATCH + "/")]
+    # -z: paths come back raw, so names with spaces or accents (common in a vault) match exactly
+    fields = _git(repo, "status", "--porcelain", "-z", "--untracked-files=all").split("\0")
+    paths, i = [], 0
+    while i < len(fields):
+        entry = fields[i]
+        i += 1
+        if len(entry) < 4:
+            continue
+        paths.append(entry[3:])
+        if entry[0] in "RC":            # a rename's source follows as its own field
+            paths.append(fields[i])
+            i += 1
+    return [p for p in paths if not p.startswith(SCRATCH + "/")]
 
 
 def _revert(repo: Path, paths: list[str]) -> None:
-    tracked = set(_git(repo, "ls-files", "--", *paths).split()) if paths else set()
+    tracked = set(_git(repo, "ls-files", "-z", "--", *paths).split("\0")) if paths else set()
     for p in paths:
         if p in tracked:
             _git(repo, "checkout", "--quiet", "HEAD", "--", p)
         else:
             _git(repo, "clean", "-fdq", "--", p)
+
+
+def _back_to(repo: Path, branch: str, start: str) -> None:
+    """Undo any commits the agent made into the working tree, so the checks see every file it
+    changed, committed or not."""
+    _git(repo, "checkout", "--quiet", branch)
+    _git(repo, "reset", "--quiet", "--soft", start)
+    _git(repo, "reset", "--quiet")
 
 
 def s4_propose(hub, job: dict) -> None:
@@ -150,8 +162,16 @@ def _run(hub, job: dict) -> None:
         hub.db.execute("UPDATE sessions SET state = 'proposing', detail = NULL WHERE number = ?",
                        (n,))
         log.info("S4 session %s: running %s", n, s.s4_provider or "custom command")
-        proc = subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True,
-                              timeout=s.s4_timeout_s, check=False)
+        start = _git(repo, "rev-parse", "HEAD").strip()
+        try:
+            proc = subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True,
+                                  timeout=s.s4_timeout_s, check=False)
+        except subprocess.TimeoutExpired:
+            _back_to(repo, branch, start)
+            _revert(repo, _changed_paths(repo))
+            raise RuntimeError(f"the agent ran past {s.s4_timeout_s}s and was stopped; "
+                               "its edits were discarded") from None
+        _back_to(repo, branch, start)
         (sdir / "s4-agent.log").write_text(
             f"exit {proc.returncode}\n--- stdout ---\n{proc.stdout[-20000:]}\n"
             f"--- stderr ---\n{proc.stderr[-20000:]}\n", encoding="utf-8")

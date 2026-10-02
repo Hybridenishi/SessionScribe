@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import json
+import threading
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from .. import archive, auth
+from .. import archive, auth, vaults
 from ..db import now
 from ..jobs import queue
 from ..proposals import publish as pub
@@ -15,6 +16,9 @@ from ..proposals.validate import check_one
 
 router = APIRouter(tags=["review"])
 REVIEWABLE = ("pending", "accepted", "rejected", "deferred")
+# one Publish at a time, from reading the accepted cards to recording the result, so a second
+# press can't re-apply them or mark published cards as conflicts
+_PUBLISH = threading.Lock()
 
 
 def _row(r) -> dict:
@@ -110,7 +114,11 @@ class PublishRequest(BaseModel):
 @router.post("/sessions/{n}/publish")
 def publish(n: int, body: PublishRequest, request: Request, _=auth.require_app):
     """Apply every accepted card to the vault's main. Pending/deferred cards are left for later."""
-    hub = request.app.state.hub
+    with _PUBLISH:
+        return _publish(request.app.state.hub, n, body.dry_run)
+
+
+def _publish(hub, n: int, dry_run: bool) -> dict:
     s = hub.settings
     batch = _latest_batch(hub.db, n)
     if batch is None or batch["published_at"] is not None:
@@ -122,7 +130,7 @@ def publish(n: int, body: PublishRequest, request: Request, _=auth.require_app):
         raise HTTPException(409, "accept at least one card first")
     try:
         result = pub.publish(s.dm_vault, n, accepted, s.git_author,
-                             push=s.push_branches, dry_run=body.dry_run)
+                             push=s.push_branches, dry_run=dry_run)
     except pub.PublishConflict as exc:
         for c in exc.conflicts:
             hub.db.execute("UPDATE proposals SET state = 'pending', check_error = ?, "
@@ -130,6 +138,10 @@ def publish(n: int, body: PublishRequest, request: Request, _=auth.require_app):
         raise HTTPException(409, {"message": str(exc), "conflicts": exc.conflicts}) from None
     except PermissionError as exc:
         raise HTTPException(403, str(exc)) from None
+    except vaults.VaultError as exc:
+        # e.g. the push was refused because main moved; the clone is already back on main and
+        # the cards stay accepted, so Publish can simply be pressed again
+        raise HTTPException(409, f"Publish stopped: {exc}") from None
     if not result.dry_run:
         t = now()
         with hub.db.transaction():
