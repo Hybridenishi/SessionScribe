@@ -114,3 +114,19 @@ def test_listeners_refuse_other_networks(settings):
     iris = TestClient(create_app(hub, run_worker=False), client=("172.30.11.7", 5000))
     assert iris.get("/healthz").status_code == 403          # iris-bot's network: main API refused
     hub.db.close()
+
+
+def test_example_compose_lets_the_healthcheck_in(settings):
+    """The image's HEALTHCHECK connects from the container's loopback; the example config must
+    allow it, or the container never goes healthy (found on the first atomsk deploy)."""
+    from dataclasses import replace
+    from pathlib import Path
+
+    import yaml
+    compose = yaml.safe_load((Path(__file__).parents[1] / "compose.example.yaml").read_text())
+    env = compose["services"]["scribe-hub"]["environment"]
+    cidrs = tuple(env["SCRIBE_MAIN_ALLOWED_CIDRS"].split(","))
+    hub = Hub(replace(settings, main_allowed_cidrs=cidrs))
+    local = TestClient(create_app(hub, run_worker=False), client=("127.0.0.1", 40000))
+    assert local.get("/healthz").status_code == 200
+    hub.db.close()
