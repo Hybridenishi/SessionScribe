@@ -10,12 +10,30 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "tests"))
 
 OUT = HERE.parent.parent / "SessionScribeTests" / "HubFixtures.swift"
+
+# A stand-in for the Session Ingestor in hub mode:
+# one card that passes the checks, one that doesn't.
+FAKE_AGENT = """
+import json, pathlib, sys
+repo = pathlib.Path(sys.argv[1])
+card = {"op": "update-section", "target": "Characters/PCs/Pat-Alpha.md", "section": "Appearance",
+        "entity": "Pat Alpha", "secret": False, "conflicts_with": [],
+        "evidence": [{"utterance_id": "t2-2000"}]}
+props = [dict(card, proposal_id="p-060-001", after="Tall, with a **new** scar.",
+              rationale="Pat was wounded at the gate."),
+         dict(card, proposal_id="p-060-002", section="Quotes", after="x",
+              rationale="A section that doesn't exist.")]
+(repo / "_INBOX/Session-060-proposals.json").write_text(
+    json.dumps({"schema": 1, "session": 60, "proposals": props}))
+(repo / "_INBOX/Session-060-Downstream-Plan.md").write_text("# Plan\\n")
+"""
 
 
 def main() -> None:
@@ -28,6 +46,12 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as d:
         tmp = Path(d)
         origin, clone = c.vault.__wrapped__(tmp)
+        note = clone / "Characters" / "PCs" / "Pat-Alpha.md"
+        note.parent.mkdir(parents=True)
+        note.write_text("---\ntitle: Pat Alpha\ntype: pc\n---\n\n## Appearance\n\nTall.\n")
+        c.git(clone, "add", "-A")
+        c.git(clone, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "note")
+        c.git(clone, "push", "-q", "origin", "main")
         settings = c.settings.__wrapped__(tmp, (origin, clone))
         hub = Hub(settings, gpu_transport=c.httpx.MockTransport(c.fake_naota))
         client = TestClient(create_app(hub, run_worker=False))
@@ -55,11 +79,26 @@ def main() -> None:
             "file": ("c.zip", c.craig_zip([(1, "stranger", "999")]), "application/zip")})
         c.drain(hub)
 
+        ready = client.get("/sessions/60", headers=h).json()
+        agent = tmp / "agent.py"
+        agent.write_text(FAKE_AGENT)
+        hub.settings = replace(hub.settings, s4_command=(sys.executable, str(agent), "{dir}"))
+        client.post("/sessions/60/propose", headers=h)
+        c.drain(hub)
+        cards = client.get("/sessions/60/proposals", headers=h).json()
+        good = next(p for p in cards["proposals"] if p["state"] == "pending")
+        decided = client.patch(f"/proposals/{good['id']}", headers=h,
+                               json={"action": "accept"}).json()
+        dry = client.post("/sessions/60/publish", headers=h, json={"dry_run": True}).json()
+
         fixtures = {
             "pair": {**pair, "token": "REDACTED-FIXTURE-TOKEN"},
             "status": client.get("/status", headers=h).json(),
             "sessions": client.get("/sessions", headers=h).json(),
-            "sessionReady": client.get("/sessions/60", headers=h).json(),
+            "sessionReady": ready,
+            "proposals": cards,
+            "decided": decided,
+            "publishDryRun": dry,
             "sessionBlocked": client.get("/sessions/61", headers=h).json(),
             "utterances": client.get("/sessions/60/utterances?limit=10", headers=h).json(),
             "campaign": client.get("/campaign", headers=h).json(),

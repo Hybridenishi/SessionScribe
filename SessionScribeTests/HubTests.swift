@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import SessionScribe
 
@@ -322,5 +323,141 @@ struct TranscriptionProgressTests {
     @Test func progressDecodesFromARealHubResponse() throws {
         let d = try LiveHubClient.decoder.decode(SessionDetail.self, from: Data(HubFixtures.sessionReady.utf8))
         #expect(d.jobs.contains { $0.progress?.done == 1 && $0.progress?.total == 1 })
+    }
+}
+
+struct TextDiffTests {
+    private func join(_ s: [TextDiff.Segment]) -> String { s.map(\.text).joined() }
+
+    @Test func eachSideRebuildsItsTextExactly() {
+        let before = "Tall.\n\n- Trusts Angelica.\n- Wary of Talos."
+        let after = "Tall, with a scar.\n\n- Trusts Angelica.\n- Owes Fang a favor."
+        let d = TextDiff.diff(before, after)
+        #expect(join(d.before) == before && join(d.after) == after)
+    }
+
+    @Test func marksOnlyTheChangedWords() {
+        let d = TextDiff.diff("The gate is shut.", "The gate is open.")
+        #expect(d.before.filter { $0.kind == .removed }.map(\.text) == ["shut"])
+        #expect(d.after.filter { $0.kind == .added }.map(\.text) == ["open"])
+        #expect(!d.after.contains { $0.kind == .removed } && !d.before.contains { $0.kind == .added })
+    }
+
+    @Test func punctuationDoesNotHideAKeptWord() {
+        let d = TextDiff.diff("Tall.", "Tall, with a scar.")
+        #expect(d.before == [.init(text: "Tall.", kind: .same)])          // nothing was removed
+        #expect(d.after == [.init(text: "Tall", kind: .same), .init(text: ", with a scar", kind: .added),
+                            .init(text: ".", kind: .same)])
+    }
+
+    @Test func markdownIsRenderedAndHighlightsLandOnTheRenderedText() {
+        let r = TextDiff.rendered("Tall.", "Tall, with a **new** scar.")
+        #expect(String(r.after.characters) == "Tall, with a new scar.")     // ** markers rendered away
+        let bold = r.after.runs.first { String(r.after[$0.range].characters) == "new" }
+        #expect(bold?.inlinePresentationIntent == .stronglyEmphasized)
+        let added = r.after.runs.filter { $0.backgroundColor != nil }.map { String(r.after[$0.range].characters) }
+        #expect(added.joined() == ", with a new scar")
+        #expect(String(r.before.characters) == "Tall.")
+    }
+
+    @Test func emptySidesAndHugeTexts() {
+        #expect(TextDiff.diff("", "New text").after == [.init(text: "New text", kind: .added)])
+        let huge = String(repeating: "word ", count: 2_000)
+        let d = TextDiff.diff(huge, huge + "more")
+        #expect(d.after.count == 1 && d.after[0].kind == .added)           // fallback, still exact
+        #expect(join(d.after) == huge + "more")
+    }
+}
+
+@MainActor
+struct ReviewTests {
+    private func cards() throws -> ProposalList {
+        try LiveHubClient.decoder.decode(ProposalList.self, from: Data(HubFixtures.proposals.utf8))
+    }
+
+    private func setUp(_ mock: MockHubClient = MockHubClient()) async throws -> (ReviewViewModel, MockHubClient, PreviewHub.Player) {
+        mock.proposalsValue = try cards()
+        let player = PreviewHub.Player()
+        let vm = ReviewViewModel(number: 60, connection: PreviewHub.connection(client: mock), player: player)
+        await vm.refresh()
+        return (vm, mock, player)
+    }
+
+    @Test func realHubResponsesDecode() throws {
+        let list = try cards()
+        #expect(list.batch?.violations == [] && list.proposals.count == 2)
+        let good = try #require(list.proposals.first { $0.state == "pending" })
+        #expect(good.before == "Tall." && good.effectiveAfter == "Tall, with a **new** scar.")
+        #expect(good.evidence.first?.speaker == "Pat/Alpha")
+        let decided = try LiveHubClient.decoder.decode(Proposal.self, from: Data(HubFixtures.decided.utf8))
+        #expect(decided.state == "accepted")
+        let dry = try LiveHubClient.decoder.decode(PublishResult.self, from: Data(HubFixtures.publishDryRun.utf8))
+        #expect(dry.dryRun && dry.files.contains("Characters/PCs/Pat-Alpha.md"))
+    }
+
+    @Test func checksFailuresAreShownApartFromTheCards() async throws {
+        let (vm, _, _) = try await setUp()
+        #expect(vm.groups.map(\.entity) == ["Pat Alpha"])
+        #expect(vm.groups[0].cards.count == 1)
+        #expect(vm.rejectedByChecks.count == 1)
+        #expect(vm.rejectedByChecks[0].checkError?.contains("no section") == true)
+    }
+
+    @Test func decisionsAndEditsGoToTheHub() async throws {
+        let (vm, mock, _) = try await setUp()
+        let card = vm.groups[0].cards[0]
+        await vm.decide(card, "reject")
+        #expect(await vm.saveEdit(card, text: "Tall."))
+        #expect(mock.calls.contains("decide \(card.id) reject"))
+        #expect(mock.calls.contains("decide \(card.id) accept after=Tall."))
+    }
+
+    @Test func aRefusedEditKeepsTheSheetOpenWithTheReason() async throws {
+        let mock = MockHubClient()
+        mock.decideError = .http(status: 422, detail: "edit rejected: missing after")
+        let (vm, _, _) = try await setUp(mock)
+        #expect(await vm.saveEdit(vm.groups[0].cards[0], text: "") == false)
+        #expect(vm.errorMessage == "edit rejected: missing after")
+    }
+
+    @Test func publishOnlyWithSomethingAccepted() async throws {
+        let (vm, mock, _) = try await setUp()
+        #expect(!vm.canPublish)                                  // nothing accepted yet
+        var list = try cards()
+        list = ProposalList(batch: list.batch, proposals: [try LiveHubClient.decoder.decode(
+            Proposal.self, from: Data(HubFixtures.decided.utf8))])
+        mock.proposalsValue = list
+        await vm.refresh()
+        #expect(vm.canPublish)
+        mock.publishValue = PublishResult(dryRun: true, commit: nil, pushed: false,
+                                          files: ["CHANGELOG.md", "Characters/PCs/Pat-Alpha.md"], applied: 1)
+        await vm.publish(dryRun: true)
+        #expect(mock.calls.contains("publish 60 dry=true"))
+        #expect(vm.notice == "Dry run: 2 file(s) would change. Nothing was written.")
+    }
+
+    @Test func publishProblemsReadPlainly() async throws {
+        let mock = MockHubClient()
+        mock.publishError = .forbidden("publishing needs push access (SCRIBE_PUSH_BRANCHES)")
+        let (vm, _, _) = try await setUp(mock)
+        await vm.publish(dryRun: false)
+        #expect(vm.errorMessage?.hasPrefix("Publishing needs write access") == true)
+        mock.publishError = .http(status: 409, detail: "1 proposal(s) no longer match the vault")
+        await vm.publish(dryRun: false)
+        #expect(vm.errorMessage == "1 proposal(s) no longer match the vault. Cards that changed are marked below; review them again.")
+    }
+
+    @Test func evidencePlaysThatSpeakersMoment() async throws {
+        let (vm, mock, player) = try await setUp()
+        let e = try #require(vm.groups[0].cards[0].evidence.first)
+        await vm.play(e)
+        #expect(mock.calls.contains("clip 60 2 1750 3050"))
+        #expect(player.played.count == 1 && vm.playingEvidence == e.utteranceId)
+    }
+
+    @Test func plainWordsForOperations() throws {
+        let p = try #require(try cards().proposals.first)
+        #expect(ReviewViewModel.describe(p) == "Update section · Appearance")
+        #expect(ReviewViewModel.stateLabel("rejected_by_checks") == "Rejected by checks")
     }
 }

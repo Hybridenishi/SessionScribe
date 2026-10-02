@@ -65,16 +65,12 @@ struct SessionScribeRootView: View {
         switch section {
         case .settings:
             SettingsView(viewModel: SettingsViewModel(connection: connection), connection: connection)
-        case .review:
-            PlaceholderWorkspaceView(
-                title: "Review",
-                systemImage: "rectangle.stack.badge.person.crop",
-                message: "Proposed vault changes arrive here as before/after cards in H2."
-            )
-        case .dashboard, .sessions:
+        case .dashboard, .sessions, .review:
             if connection.isPaired {
                 if section == .dashboard {
                     DashboardView(viewModel: DashboardViewModel(connection: connection))
+                } else if section == .review {
+                    ReviewHomeView(connection: connection, player: player)
                 } else {
                     SessionsView(viewModel: SessionsViewModel(connection: connection),
                                  connection: connection, player: player)
