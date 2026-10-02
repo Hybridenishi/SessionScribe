@@ -39,7 +39,7 @@ struct SettingsView: View {
                           prompt: Text("https://atomsk.your-tailnet.ts.net:8443"))
                 TextField("Pairing code", text: $viewModel.pairingCode, prompt: Text("ABCD-EFGH"))
                     .font(.body.monospaced())
-                Text("On atomsk, run: docker exec -it scribe-hub scribe-hub pair --device \"Nate's MacBook Pro\"")
+                Text("From this Mac, run: ssh atomsk-lan 'docker exec scribe-hub scribe-hub pair --device \"Nate MacBook Pro\"'")
                     .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 if let error = viewModel.pairingError {
                     Text(error).foregroundStyle(.red)

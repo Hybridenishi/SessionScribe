@@ -95,8 +95,12 @@ tailscale serve --bg --https=8443 http://127.0.0.1:8780
 ## 8. Pair the Mac app (Nate)
 
 ```bash
-ssh atomsk-lan docker exec -it scribe-hub scribe-hub pair --device "Nate's MacBook Pro"
+ssh atomsk-lan 'docker exec scribe-hub scribe-hub pair --device "Nate MacBook Pro"'
 ```
+
+Quote the whole remote command, and keep apostrophes out of the device name: ssh hands the line to
+the remote shell to parse a second time, so an unquoted `Nate's` breaks it. No `-it` is needed; the
+command only prints.
 
 In SessionScribe → Settings: hub address `https://atomsk.humpback-koi.ts.net:8443`, the code, Pair.
 The Dashboard should show Hub healthy.
