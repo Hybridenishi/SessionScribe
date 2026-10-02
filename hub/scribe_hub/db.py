@@ -54,6 +54,44 @@ MIGRATIONS = [
     CREATE INDEX jobs_session ON jobs(session);
     CREATE TABLE worker_seen (name TEXT PRIMARY KEY, at REAL NOT NULL);
     """,
+    # 2 — H2: proposal batches (one S4 run) and the proposals the DM reviews
+    """
+    CREATE TABLE proposal_batches (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        session     INTEGER NOT NULL REFERENCES sessions(number),
+        vault       TEXT NOT NULL,           -- dm | players
+        provider    TEXT NOT NULL,           -- codex | claude | custom
+        created_at  REAL NOT NULL,
+        violations  TEXT NOT NULL DEFAULT '[]',   -- files the agent touched that it must not
+        summary     TEXT,
+        published_at REAL,
+        publish_commit TEXT
+    );
+    CREATE TABLE proposals (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        batch       INTEGER NOT NULL REFERENCES proposal_batches(id),
+        proposal_id TEXT NOT NULL,           -- the agent's id, e.g. p-060-001
+        op          TEXT NOT NULL,
+        target      TEXT NOT NULL,
+        section     TEXT,
+        key         TEXT,
+        from_path   TEXT,
+        after       TEXT,
+        edited_after TEXT,                   -- the DM's edit, if any, which wins over after
+        before      TEXT,                    -- read by the hub from the file, never the model
+        entity      TEXT NOT NULL,
+        secret      INTEGER NOT NULL DEFAULT 0,
+        rationale   TEXT NOT NULL DEFAULT '',
+        evidence    TEXT NOT NULL DEFAULT '[]',
+        conflicts   TEXT NOT NULL DEFAULT '[]',
+        -- pending | accepted | rejected | deferred | rejected_by_checks | applied
+        state       TEXT NOT NULL,
+        check_error TEXT,
+        updated_at  REAL NOT NULL,
+        UNIQUE (batch, proposal_id)
+    );
+    CREATE INDEX proposals_batch ON proposals(batch, state);
+    """,
 ]
 
 

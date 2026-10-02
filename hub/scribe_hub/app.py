@@ -19,6 +19,7 @@ from .api import (
     auth_routes,
     campaign_routes,
     gpu_routes,
+    proposals_routes,
     sessions_routes,
     status_routes,
     worker_routes,
@@ -36,6 +37,8 @@ class Hub:
     def __init__(self, settings: Settings, gpu_transport=None):
         self.settings = settings
         settings.archive_dir.mkdir(parents=True, exist_ok=True)
+        for d in ("codex", "claude"):          # agent CLI logins (CODEX_HOME, CLAUDE_CONFIG_DIR)
+            (settings.data_dir / "agents" / d).mkdir(parents=True, exist_ok=True, mode=0o700)
         self.db = Database(settings.db_path)
         self.gpu = GpuQueue(settings.naota_llm_base, transport=gpu_transport)
         self._wake: asyncio.Event | None = None
@@ -111,7 +114,8 @@ def create_app(hub: Hub, run_worker: bool = True) -> FastAPI:
     app.state.hub = hub
     app.state.db = hub.db
     app.state.settings = hub.settings
-    for r in (auth_routes, status_routes, sessions_routes, campaign_routes, worker_routes):
+    for r in (auth_routes, status_routes, sessions_routes, campaign_routes, worker_routes,
+              proposals_routes):
         app.include_router(r.router)
     _source_guard(app, hub.settings.main_allowed_cidrs, "main")
     return app
