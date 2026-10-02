@@ -1,7 +1,7 @@
 """scribe-hub command line, run inside the container on atomsk.
 
   scribe-hub serve                                   main API + GPU listener
-  scribe-hub pair --device "Nate's MacBook Pro"      print a one-time pairing code
+  scribe-hub pair --device "Nate MacBook Pro"        print a one-time pairing code
   scribe-hub devices                                 list paired devices and service tokens
   scribe-hub revoke <id>                             revoke one
   scribe-hub token --scope worker --name mac-worker --out /secrets/worker.token

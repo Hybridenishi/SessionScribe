@@ -40,7 +40,7 @@ networks:
 
 # After `docker compose up -d`:
 #   tailscale serve --bg --https=8443 http://127.0.0.1:8780    (443 is open-webui's)
-#   docker exec -it scribe-hub scribe-hub pair --device "Nate's MacBook Pro"
+#   docker exec scribe-hub scribe-hub pair --device "Nate MacBook Pro"
 #   docker exec scribe-hub scribe-hub token --scope worker --name mac-worker --out /data/mac-worker.token
 #   docker exec scribe-hub scribe-hub token --scope gpu --name iris-bot --out /data/iris-gpu.token
 # iris-bot: join the azora-iris network, IRIS_LLM_BASE=http://scribe-hub:8781, and send the gpu token.
