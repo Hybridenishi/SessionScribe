@@ -19,6 +19,8 @@ final class SessionDetailViewModel {
         let fraction: Double?
         let status: ServiceHealth.Status
         let text: String
+        /// True for the track the Mac is working on right now and still moving (not stalled).
+        var isActive = false
     }
 
     /// No progress report for this long while running means something is wrong. The worker
@@ -195,7 +197,8 @@ final class SessionDetailViewModel {
                                              text: "No progress for \(Self.duration(age)): is the Mac awake and on Tailscale?")
                     }
                     return TrackProgress(id: track, speaker: name, fraction: fraction, status: .inactive,
-                                         text: "\(Int((fraction * 100).rounded()))% · \(p.done) of \(p.total) chunks · updated \(Self.duration(age)) ago")
+                                         text: "\(Int((fraction * 100).rounded()))% · \(p.done) of \(p.total) chunks · updated \(Self.duration(age)) ago",
+                                         isActive: true)
                 }
                 let age = t - job.updatedAt
                 if age > Self.preparingStallAfter {
@@ -203,7 +206,7 @@ final class SessionDetailViewModel {
                                          text: "Preparing for \(Self.duration(age)) with no progress: check the Mac worker")
                 }
                 return TrackProgress(id: track, speaker: name, fraction: nil, status: .inactive,
-                                     text: "Downloading and preparing audio…")
+                                     text: "Downloading and preparing audio…", isActive: true)
             default:
                 return TrackProgress(id: track, speaker: name, fraction: 0, status: .inactive,
                                      text: "Waiting for the Mac worker")
