@@ -40,6 +40,11 @@ class Result:
 def current_before(vault, p: dict) -> str:
     target = safe_path(vault, p["target"])
     if p["op"] in ("create-note", "open-question", "move-note"):
+        # a note made in Obsidian since, or a moved-away source, is a conflict, not an overwrite
+        if target.exists():
+            raise ValueError(f"{p['target']} already exists")
+        if p["op"] == "move-note" and not safe_path(vault, p["from_path"]).exists():
+            raise ValueError(f"{p['from_path']} no longer exists")
         return ""
     text = target.read_text(encoding="utf-8") if target.exists() else None
     if text is None:

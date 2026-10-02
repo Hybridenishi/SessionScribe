@@ -40,6 +40,13 @@ FAKE_AGENT = textwrap.dedent('''
         sys.exit(spec["exit"])
     for rel, text in spec.get("touch", {}).items():          # files it must NOT edit
         p = repo / rel; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text)
+    if spec.get("commit"):                                   # and commits them itself
+        import subprocess
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(repo), "-c", "user.name=a", "-c", "user.email=a@a",
+                        "commit", "-qm", "agent"], check=True)
+    if spec.get("sleep"):
+        import time; time.sleep(spec["sleep"])
     if spec.get("proposals") is not None:
         (repo / "_INBOX/Session-060-proposals.json").write_text(json.dumps(spec["proposals"]))
         (repo / "_INBOX/Session-060-Downstream-Plan.md").write_text("# Plan\\n")
@@ -303,3 +310,105 @@ def test_propose_rerun_supersedes_the_old_cards(review, headers):
     assert client.post("/sessions/60/propose", headers=headers).status_code == 409   # one at a time
     drain(hub)
     assert [p["proposal_id"] for p in cards(client, headers)["proposals"]] == ["p-060-003"]
+
+
+def seed(origin, clone, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        (clone / rel).parent.mkdir(parents=True, exist_ok=True)
+        (clone / rel).write_text(text)
+    git(clone, "add", "-A")
+    git(clone, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "seed")
+    git(clone, "push", "-q", "origin", "main")
+
+
+def test_agent_commits_and_names_with_spaces_or_accents_are_reverted(review, headers):
+    hub, client, spec, origin, clone = review
+    seed(origin, clone, {"Characters/NPCs/Zoë Two.md": "original\n"})
+    run_to_review(hub, client, headers, headers, spec, {
+        "touch": {"Characters/NPCs/Zoë Two.md": "vandalised\n", "Places/New Town.md": "x\n"},
+        "commit": True,
+        "proposals": {"schema": 1, "session": 60, "proposals": GOOD[:1]}})
+    data = cards(client, headers)
+    assert data["batch"]["violations"] == ["Characters/NPCs/Zoë Two.md", "Places/New Town.md"]
+    assert (clone / "Characters/NPCs/Zoë Two.md").read_text() == "original\n"
+    assert not (clone / "Places/New Town.md").exists()
+    branch = git(clone, "show", "scribe/session-060:Characters/NPCs/Zoë Two.md")
+    assert branch == "original\n"                                 # the agent's commit is gone
+    assert "_INBOX/Session-060-proposals.json" in git(
+        clone, "ls-tree", "-r", "--name-only", "scribe/session-060")
+    assert git(clone, "status", "--porcelain").strip() == ""
+
+
+def test_an_agent_that_runs_too_long_is_stopped_and_its_edits_dropped(review, headers):
+    hub, client, spec, origin, clone = review
+    hub.settings = replace(hub.settings, s4_timeout_s=1)
+    run_to_review(hub, client, headers, headers, spec, {
+        "touch": {"README.md": "vandalised\n"}, "sleep": 5,
+        "proposals": {"schema": 1, "session": 60, "proposals": GOOD[:1]}})
+    s = client.get("/sessions/60", headers=headers).json()
+    assert s["state"] == "failed" and "was stopped" in s["detail"]
+    assert (clone / "README.md").read_text() == "test vault\n"
+    assert git(clone, "status", "--porcelain").strip() == ""
+
+
+def test_a_hub_restart_does_not_rerun_the_agent(review, headers):
+    hub, client, spec, origin, clone = review
+    run_to_review(hub, client, headers, headers, spec, {"proposals": {
+        "schema": 1, "session": 60, "proposals": GOOD[:1]}})
+    client.post("/sessions/60/propose", headers=headers)
+    job = queue.claim(hub.db, "hub")                  # the hub dies while the agent runs
+    assert job["stage"] == "s4"
+    queue.recover(hub.db)
+    assert queue.get(hub.db, job["id"])["state"] == "failed"
+    s = client.get("/sessions/60", headers=headers).json()
+    assert s["state"] == "failed" and "run it again from the app" in s["detail"]
+
+
+def test_conflicts_with_is_read_as_note_and_section_refs(review, headers):
+    hub, client, spec, origin, clone = review
+    run_to_review(hub, client, headers, headers, spec, {"proposals": {
+        "schema": 1, "session": 60, "proposals": [
+            {**GOOD[0], "conflicts_with": ["Characters/PCs/Pat-Alpha.md#Relationships",
+                                           {"target": "Places/Gate.md"}]},
+            {**GOOD[1], "conflicts_with": [7]}]}})
+    by = {p["proposal_id"]: p for p in cards(client, headers)["proposals"]}
+    assert by["p-060-001"]["conflicts"] == [
+        {"target": "Characters/PCs/Pat-Alpha.md", "section": "Relationships"},
+        {"target": "Places/Gate.md", "section": None}]
+    assert by["p-060-002"]["state"] == "rejected_by_checks"
+    assert "not a note or section reference" in by["p-060-002"]["check_error"]
+
+
+def test_publish_stops_if_a_new_note_was_made_there_since(review, headers):
+    hub, client, spec, origin, clone = review
+    hub.settings = replace(hub.settings, push_branches=True)
+    run_to_review(hub, client, headers, headers, spec, {"proposals": {
+        "schema": 1, "session": 60, "proposals": GOOD[3:4]}})
+    accept_all_good(client, headers)
+    import subprocess
+    other = clone.parent / "obsidian"
+    subprocess.run(["git", "clone", "-q", str(origin), str(other)], check=True)
+    seed(origin, other, {"Chronicle/Sessions/Session-060-The-Gate.md": "Nate's own notes\n"})
+    nates = git(origin, "rev-parse", "main").strip()
+    r = client.post("/sessions/60/publish", headers=headers, json={})
+    assert r.status_code == 409 and "already exists" in r.json()["detail"]["conflicts"][0]["reason"]
+    assert git(origin, "rev-parse", "main").strip() == nates
+    assert git(origin, "show", "main:Chronicle/Sessions/Session-060-The-Gate.md") == \
+        "Nate's own notes\n"
+
+
+def test_a_refused_push_reads_plainly_and_keeps_the_cards(review, headers):
+    hub, client, spec, origin, clone = review
+    hub.settings = replace(hub.settings, push_branches=True)
+    run_to_review(hub, client, headers, headers, spec, {"proposals": {
+        "schema": 1, "session": 60, "proposals": GOOD[:1]}})
+    accept_all_good(client, headers)
+    hook = origin / "hooks" / "pre-receive"
+    hook.write_text("#!/bin/sh\necho 'main moved' >&2\nexit 1\n")
+    hook.chmod(0o755)
+    r = client.post("/sessions/60/publish", headers=headers, json={})
+    assert r.status_code == 409 and r.json()["detail"].startswith("Publish stopped:")
+    assert git(clone, "rev-parse", "--abbrev-ref", "HEAD").strip() == "main"
+    assert [p["state"] for p in cards(client, headers)["proposals"]] == ["accepted"]
+    hook.unlink()
+    assert client.post("/sessions/60/publish", headers=headers, json={}).json()["pushed"]

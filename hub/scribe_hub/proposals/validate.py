@@ -61,6 +61,25 @@ def safe_path(vault: Path, rel: str) -> Path:
     return full
 
 
+def _conflict_refs(raw) -> list[dict]:
+    """`conflicts_with` as {target, section} refs, the shape the app shows. The agent may write
+    each one as an object or as "Note.md#Section"."""
+    if not isinstance(raw, list):
+        raise ValueError("conflicts_with must be a list")
+    out = []
+    for ref in raw:
+        if isinstance(ref, str) and ref.strip():
+            target, _, section = ref.strip().partition("#")
+            out.append({"target": target.strip() or None, "section": section.strip() or None})
+        elif (isinstance(ref, dict)
+              and all(isinstance(ref.get(k), str | None) for k in ("target", "section"))
+              and (ref.get("target") or ref.get("section"))):
+            out.append({"target": ref.get("target"), "section": ref.get("section")})
+        else:
+            raise ValueError(f"conflicts_with entry {ref!r} is not a note or section reference")
+    return out
+
+
 def _resolve_evidence(raw, utterances: dict[str, dict]) -> list[dict]:
     if not isinstance(raw, list):
         raise ValueError("evidence must be a list")
@@ -92,8 +111,7 @@ def check_one(raw: dict, vault: Path, utterances: dict[str, dict]) -> Checked:
             raise ValueError("missing rationale")
         if c.op in NEEDS_AFTER and not (isinstance(c.after, str) and c.after.strip()):
             raise ValueError("missing after")
-        if not isinstance(c.conflicts, list):
-            raise ValueError("conflicts_with must be a list")
+        c.conflicts = _conflict_refs(c.conflicts)
         c.evidence = _resolve_evidence(raw.get("evidence") or [], utterances)
         target = safe_path(vault, c.target)
 
