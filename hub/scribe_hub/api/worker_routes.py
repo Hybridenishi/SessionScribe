@@ -25,6 +25,12 @@ class Result(BaseModel):
     engine: dict = {}
 
 
+class Progress(BaseModel):
+    """How far the worker is through one track: chunks of speech done out of total."""
+    done: int = Field(ge=0)
+    total: int = Field(ge=0)
+
+
 class Failure(BaseModel):
     error: str = Field(max_length=2000)
 
@@ -63,10 +69,15 @@ def job_audio(job_id: int, request: Request, device=auth.require_worker):
 
 
 @router.post("/jobs/{job_id}/heartbeat")
-def heartbeat(job_id: int, request: Request, device=auth.require_worker):
+def heartbeat(job_id: int, request: Request, body: Progress | None = None,
+              device=auth.require_worker):
+    """Keep the lease alive. With a body, also record progress for the app's progress bar."""
     _own_running(request, job_id)
     _seen(request, device)
-    queue.extend(request.app.state.db, job_id, request.app.state.settings.worker_lease_s)
+    if body is not None and body.done > body.total:
+        raise HTTPException(422, "done cannot exceed total")
+    queue.extend(request.app.state.db, job_id, request.app.state.settings.worker_lease_s,
+                 body.model_dump() if body is not None else None)
     return {"ok": True}
 
 

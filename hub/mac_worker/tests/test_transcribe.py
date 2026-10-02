@@ -72,3 +72,35 @@ def test_speech_between_silences_is_found(tmp_path):
     pcm = tx.load_pcm(str(wav))
     regions = tx.speech_regions(str(wav), len(pcm) / tx.SR)
     assert len(regions) == 1 and abs(regions[0][0] - 3) < 0.3 and abs(regions[0][1] - 6) < 0.3
+
+
+def test_progress_reports_are_throttled_but_keep_first_and_last():
+    from scribe_worker.main import _progress_reporter
+
+    sent = []
+
+    class FakeHub:
+        def heartbeat(self, job, done, total):
+            sent.append((done, total))
+
+    now = [0.0]
+    report = _progress_reporter(FakeHub(), 1, every_s=15, clock=lambda: now[0])
+    for i in range(0, 11):            # 10 chunks, one every 4 s
+        report(i, 10)
+        now[0] += 4
+    # at t=0 (first), t=16 and t=32 (15 s apart), and t=40 (last, always sent)
+    assert sent == [(0, 10), (4, 10), (8, 10), (10, 10)]
+
+
+def test_a_failed_progress_report_never_stops_the_work():
+    import urllib.error
+
+    from scribe_worker.main import _progress_reporter
+
+    class DownHub:
+        def heartbeat(self, *a):
+            raise urllib.error.URLError("hub unreachable")
+
+    report = _progress_reporter(DownHub(), 1)
+    report(0, 5)
+    report(5, 5)                      # no exception

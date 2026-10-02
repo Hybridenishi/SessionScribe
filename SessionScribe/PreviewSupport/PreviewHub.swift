@@ -128,10 +128,10 @@ enum PreviewHub {
             unmapped: [],
             stage3: .init(utterances: 3, branch: "scribe/session-060", commit: "abc1234", pushed: false)),
         jobs: [
-            .init(id: 1, stage: "s1", lane: "hub", state: "done", attempts: 1, error: nil, track: nil),
-            .init(id: 2, stage: "s2", lane: "mac", state: "done", attempts: 1, error: nil, track: 1),
-            .init(id: 3, stage: "s2", lane: "mac", state: "done", attempts: 1, error: nil, track: 2),
-            .init(id: 4, stage: "s3", lane: "hub", state: "done", attempts: 1, error: nil, track: nil)
+            .init(id: 1, stage: "s1", lane: "hub", state: "done", attempts: 1, error: nil, updatedAt: 1_789_400_000, track: nil, progress: nil),
+            .init(id: 2, stage: "s2", lane: "mac", state: "done", attempts: 1, error: nil, updatedAt: 1_789_400_000, track: 1, progress: nil),
+            .init(id: 3, stage: "s2", lane: "mac", state: "done", attempts: 1, error: nil, updatedAt: 1_789_400_000, track: 2, progress: nil),
+            .init(id: 4, stage: "s3", lane: "hub", state: "done", attempts: 1, error: nil, updatedAt: 1_789_400_000, track: nil, progress: nil)
         ])
 
     static let utterances = [

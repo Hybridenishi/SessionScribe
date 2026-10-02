@@ -44,6 +44,8 @@ def main() -> None:
         while (r := client.post("/worker/claim", headers=w)).status_code == 200:
             job = r.json()
             start = 1000 * job["track"]
+            client.post(f"/worker/jobs/{job['job']}/heartbeat", headers=w,
+                        json={"done": 1, "total": 1})
             client.post(f"/worker/jobs/{job['job']}/result", headers=w, json={
                 "utterances": [{"start_ms": start, "end_ms": start + 800,
                                 "text": f"Line from track {job['track']}.", "confidence": 0.9}],

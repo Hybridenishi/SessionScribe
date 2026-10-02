@@ -37,6 +37,30 @@ struct SessionDetailView: View {
             }
             HealthListView(rows: viewModel.stages.map { HealthRow(name: $0.title, status: $0.status, detail: $0.detail) },
                            title: "Progress")
+            let tracks = viewModel.trackProgress
+            if tracks.contains(where: { $0.fraction != 1 }) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(tracks) { t in
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Text(t.speaker).font(.callout.weight(.medium))
+                                    .foregroundStyle(color(for: t.id))
+                                Spacer()
+                                Text(t.text).font(.caption)
+                                    .foregroundStyle(t.status == .degraded ? .orange : (t.status == .failed ? .red : .secondary))
+                                    .lineLimit(1)
+                            }
+                            if let f = t.fraction {
+                                ProgressView(value: f)
+                            } else if t.status != .failed {
+                                ProgressView().progressViewStyle(.linear)
+                            }
+                        }
+                    }
+                }
+                .padding(10)
+                .background(.background, in: RoundedRectangle(cornerRadius: 8))
+            }
             if let tracks = viewModel.detail?.manifest?.tracks {
                 HStack(spacing: 14) {
                     ForEach(tracks) { t in

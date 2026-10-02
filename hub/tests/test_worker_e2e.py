@@ -78,3 +78,4 @@ def test_worker_transcribes_and_hub_stages(tmp_path, client, hub, app_headers, w
         [("Gamemaster/DM", 1), ("Pat/Alpha", 1)]
     s2 = [j for j in s["jobs"] if j["stage"] == "s2"]
     assert all(j["state"] == "done" for j in s2)
+    assert all(j["progress"]["done"] == j["progress"]["total"] == 1 for j in s2)
