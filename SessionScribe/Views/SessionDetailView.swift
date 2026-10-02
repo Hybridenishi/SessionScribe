@@ -17,6 +17,10 @@ struct SessionDetailView: View {
             if viewModel.canRetry {
                 Button("Retry") { Task { await viewModel.retry() } }
             }
+            if viewModel.canPropose {
+                Button("Propose changes") { Task { await viewModel.propose() } }
+                    .help("Ask the agent to draft vault changes from this transcript, for review")
+            }
             if viewModel.canRetranscribe {
                 Button("Re-run transcription") { Task { await viewModel.retranscribe() } }
             }

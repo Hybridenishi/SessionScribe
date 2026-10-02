@@ -173,3 +173,68 @@ struct UploadResponse: Decodable, Sendable {
     let session: Int
     let job: Int
 }
+
+// MARK: - H2 review
+
+struct ProposalBatch: Decodable, Equatable, Sendable {
+    let id: Int
+    let session: Int
+    let provider: String
+    let createdAt: Double
+    /// Files the agent touched that it must not; the hub reverted them.
+    let violations: [String]
+    let publishedAt: Double?
+    let publishCommit: String?
+}
+
+struct Proposal: Decodable, Equatable, Identifiable, Sendable {
+    struct Evidence: Decodable, Equatable, Hashable, Sendable {
+        let utteranceId: String
+        let track: Int
+        let speaker: String
+        let startMs: Int
+        let endMs: Int
+        let text: String
+    }
+
+    struct Conflict: Decodable, Equatable, Hashable, Sendable {
+        let target: String?
+        let section: String?
+    }
+
+    let id: Int
+    let proposalId: String
+    let op: String
+    let target: String
+    let section: String?
+    let key: String?
+    let fromPath: String?
+    let after: String?
+    let editedAfter: String?
+    /// Read by the hub from the vault file, never written by the model.
+    let before: String?
+    let entity: String
+    let secret: Bool
+    let rationale: String
+    let evidence: [Evidence]
+    let conflicts: [Conflict]
+    /// pending | accepted | rejected | deferred | rejected_by_checks | applied
+    let state: String
+    let checkError: String?
+
+    /// What would be written: the DM's edit if there is one, otherwise the agent's text.
+    var effectiveAfter: String { editedAfter ?? after ?? "" }
+}
+
+struct ProposalList: Decodable, Sendable {
+    let batch: ProposalBatch?
+    let proposals: [Proposal]
+}
+
+struct PublishResult: Decodable, Equatable, Sendable {
+    let dryRun: Bool
+    let commit: String?
+    let pushed: Bool
+    let files: [String]
+    let applied: Int
+}

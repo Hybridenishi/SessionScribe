@@ -3,7 +3,7 @@
 enum HubFixtures {
     static let pair = #"""
 {
-  "device_id": "7c1f9db3",
+  "device_id": "90960154",
   "device_name": "Fixture Mac",
   "token": "REDACTED-FIXTURE-TOKEN"
 }
@@ -21,34 +21,34 @@ enum HubFixtures {
   "jobs": {
     "hub": {
       "blocked": 1,
-      "done": 2
+      "done": 3
     },
     "mac": {
       "done": 2
     }
   },
   "mac_worker": {
-    "last_seen": 1790906967.3756878,
+    "last_seen": 1790909252.060589,
     "name": "mac-worker"
   },
   "sessions": {
     "blocked": 1,
     "recent": [
       {
-        "created_at": 1790906967.540237,
+        "created_at": 1790909252.164167,
         "detail": "Add to campaign.yaml, then retry: stranger (999)",
         "number": 61,
         "state": "blocked"
       },
       {
-        "created_at": 1790906967.3082938,
-        "detail": null,
+        "created_at": 1790909252.007405,
+        "detail": "1 proposal(s) to review",
         "number": 60,
-        "state": "ready"
+        "state": "review"
       }
     ]
   },
-  "time": 1790906967.568532,
+  "time": 1790909252.3868759,
   "vault": {
     "configured": true,
     "push_branches": false
@@ -60,16 +60,16 @@ enum HubFixtures {
 {
   "sessions": [
     {
-      "created_at": 1790906967.540237,
+      "created_at": 1790909252.164167,
       "detail": "Add to campaign.yaml, then retry: stranger (999)",
       "number": 61,
       "state": "blocked"
     },
     {
-      "created_at": 1790906967.3082938,
-      "detail": null,
+      "created_at": 1790909252.007405,
+      "detail": "1 proposal(s) to review",
       "number": 60,
-      "state": "ready"
+      "state": "review"
     }
   ]
 }
@@ -77,7 +77,7 @@ enum HubFixtures {
 
     static let sessionReady = #"""
 {
-  "created_at": 1790906967.3082938,
+  "created_at": 1790909252.007405,
   "detail": null,
   "jobs": [
     {
@@ -89,7 +89,7 @@ enum HubFixtures {
       "stage": "s1",
       "state": "done",
       "track": null,
-      "updated_at": 1790906967.361907
+      "updated_at": 1790909252.051019
     },
     {
       "attempts": 1,
@@ -97,14 +97,14 @@ enum HubFixtures {
       "id": 2,
       "lane": "mac",
       "progress": {
-        "at": 1790906967.368444,
+        "at": 1790909252.055309,
         "done": 1,
         "total": 1
       },
       "stage": "s2",
       "state": "done",
       "track": 1,
-      "updated_at": 1790906967.370047
+      "updated_at": 1790909252.056583
     },
     {
       "attempts": 1,
@@ -112,14 +112,14 @@ enum HubFixtures {
       "id": 3,
       "lane": "mac",
       "progress": {
-        "at": 1790906967.373513,
+        "at": 1790909252.0585349,
         "done": 1,
         "total": 1
       },
       "stage": "s2",
       "state": "done",
       "track": 2,
-      "updated_at": 1790906967.374741
+      "updated_at": 1790909252.059632
     },
     {
       "attempts": 1,
@@ -130,7 +130,7 @@ enum HubFixtures {
       "stage": "s3",
       "state": "done",
       "track": null,
-      "updated_at": 1790906967.5350342
+      "updated_at": 1790909252.162404
     }
   ],
   "manifest": {
@@ -138,12 +138,12 @@ enum HubFixtures {
       "recording_id": "TESTREC",
       "start_time": "2026-10-01T00:00:00.000Z"
     },
-    "created_at": 1790906967.36129,
+    "created_at": 1790909252.050731,
     "session": 60,
     "stage3": {
-      "at": 1790906967.534225,
+      "at": 1790909252.162028,
       "branch": "scribe/session-060",
-      "commit": "c1ea4712379394b67c74ed959c731a70349e87ec",
+      "commit": "97a8744b4a9742e9a2bdf078115a229a011b8cb5",
       "pushed": false,
       "utterances": 2
     },
@@ -180,9 +180,135 @@ enum HubFixtures {
 }
 """#
 
+    static let proposals = #"""
+{
+  "batch": {
+    "created_at": 1790909252.260316,
+    "id": 1,
+    "provider": "custom",
+    "publish_commit": null,
+    "published_at": null,
+    "session": 60,
+    "summary": null,
+    "vault": "dm",
+    "violations": []
+  },
+  "proposals": [
+    {
+      "after": "Tall, with a **new** scar.",
+      "batch": 1,
+      "before": "Tall.",
+      "check_error": null,
+      "conflicts": [],
+      "edited_after": null,
+      "entity": "Pat Alpha",
+      "evidence": [
+        {
+          "end_ms": 2800,
+          "speaker": "Pat/Alpha",
+          "start_ms": 2000,
+          "text": "Line from track 2.",
+          "track": 2,
+          "utterance_id": "t2-2000"
+        }
+      ],
+      "from_path": null,
+      "id": 1,
+      "key": null,
+      "op": "update-section",
+      "proposal_id": "p-060-001",
+      "rationale": "Pat was wounded at the gate.",
+      "secret": false,
+      "section": "Appearance",
+      "state": "pending",
+      "target": "Characters/PCs/Pat-Alpha.md",
+      "updated_at": 1790909252.260316
+    },
+    {
+      "after": "x",
+      "batch": 1,
+      "before": null,
+      "check_error": "no section titled 'Quotes'",
+      "conflicts": [],
+      "edited_after": null,
+      "entity": "Pat Alpha",
+      "evidence": [
+        {
+          "end_ms": 2800,
+          "speaker": "Pat/Alpha",
+          "start_ms": 2000,
+          "text": "Line from track 2.",
+          "track": 2,
+          "utterance_id": "t2-2000"
+        }
+      ],
+      "from_path": null,
+      "id": 2,
+      "key": null,
+      "op": "update-section",
+      "proposal_id": "p-060-002",
+      "rationale": "A section that doesn't exist.",
+      "secret": false,
+      "section": "Quotes",
+      "state": "rejected_by_checks",
+      "target": "Characters/PCs/Pat-Alpha.md",
+      "updated_at": 1790909252.260316
+    }
+  ]
+}
+"""#
+
+    static let decided = #"""
+{
+  "after": "Tall, with a **new** scar.",
+  "batch": 1,
+  "before": "Tall.",
+  "check_error": null,
+  "conflicts": [],
+  "edited_after": null,
+  "entity": "Pat Alpha",
+  "evidence": [
+    {
+      "end_ms": 2800,
+      "speaker": "Pat/Alpha",
+      "start_ms": 2000,
+      "text": "Line from track 2.",
+      "track": 2,
+      "utterance_id": "t2-2000"
+    }
+  ],
+  "from_path": null,
+  "id": 1,
+  "key": null,
+  "op": "update-section",
+  "proposal_id": "p-060-001",
+  "rationale": "Pat was wounded at the gate.",
+  "secret": false,
+  "section": "Appearance",
+  "state": "accepted",
+  "target": "Characters/PCs/Pat-Alpha.md",
+  "updated_at": 1790909252.263508
+}
+"""#
+
+    static let publishDryRun = #"""
+{
+  "applied": 1,
+  "commit": null,
+  "dry_run": true,
+  "files": [
+    "Characters/PCs/Pat-Alpha.md",
+    "_INBOX/Session-060-Downstream-Plan.md",
+    "_INBOX/Session-060-Full-Transcript.md",
+    "_INBOX/Session-060-proposals.json"
+  ],
+  "pushed": false
+}
+"""#
+
     static let sessionBlocked = #"""
 {
-  "created_at": 1790906967.540237,
+  "created_at": 1790909252.164167,
   "detail": "Add to campaign.yaml, then retry: stranger (999)",
   "jobs": [
     {
@@ -194,7 +320,7 @@ enum HubFixtures {
       "stage": "s1",
       "state": "blocked",
       "track": null,
-      "updated_at": 1790906967.566498
+      "updated_at": 1790909252.1860092
     }
   ],
   "manifest": {
@@ -202,7 +328,7 @@ enum HubFixtures {
       "recording_id": "TESTREC",
       "start_time": "2026-10-01T00:00:00.000Z"
     },
-    "created_at": 1790906967.566175,
+    "created_at": 1790909252.185778,
     "session": 61,
     "stage3": null,
     "tracks": [
@@ -286,17 +412,17 @@ enum HubFixtures {
 {
   "devices": [
     {
-      "created_at": 1790906967.3024378,
-      "id": "7c1f9db3",
-      "last_seen": 1790906967.575691,
+      "created_at": 1790909252.0035682,
+      "id": "90960154",
+      "last_seen": 1790909252.392054,
       "name": "Fixture Mac",
       "revoked_at": null,
       "scope": "app"
     },
     {
-      "created_at": 1790906967.303444,
-      "id": "406c5b14",
-      "last_seen": 1790906967.3755698,
+      "created_at": 1790909252.004319,
+      "id": "88945a7b",
+      "last_seen": 1790909252.060458,
       "name": "mac-worker",
       "revoked_at": null,
       "scope": "worker"

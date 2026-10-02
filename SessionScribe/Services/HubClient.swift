@@ -41,6 +41,11 @@ protocol HubClient: Sendable {
     func saveCampaign(_ campaign: CampaignConfig) async throws -> CampaignConfig
     func devices() async throws -> [HubDevice]
     func revokeDevice(_ id: String) async throws
+    // H2 review
+    func proposals(session: Int) async throws -> ProposalList
+    func decide(proposal id: Int, action: String, after: String?) async throws -> Proposal
+    func propose(session: Int) async throws
+    func publish(session: Int, dryRun: Bool) async throws -> PublishResult
 }
 
 enum HubURL {
@@ -154,6 +159,32 @@ struct LiveHubClient: HubClient {
         _ = try await raw("DELETE", "auth/devices/\(id)")
     }
 
+    func proposals(session number: Int) async throws -> ProposalList {
+        try await get("sessions/\(number)/proposals")
+    }
+
+    func decide(proposal id: Int, action: String, after: String?) async throws -> Proposal {
+        var body: [String: Any] = ["action": action]
+        if let after { body["after"] = after }
+        return try Self.decode(Proposal.self, try await sendJSON("PATCH", "proposals/\(id)", body))
+    }
+
+    func propose(session number: Int) async throws {
+        _ = try await raw("POST", "sessions/\(number)/propose")
+    }
+
+    func publish(session number: Int, dryRun: Bool) async throws -> PublishResult {
+        try Self.decode(PublishResult.self,
+                        try await sendJSON("POST", "sessions/\(number)/publish", ["dry_run": dryRun]))
+    }
+
+    private func sendJSON(_ method: String, _ path: String, _ body: [String: Any]) async throws -> Data {
+        var request = authorized(method, path)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await Self.send(request, session: session)
+    }
+
     // MARK: - Plumbing
 
     private func authorized(_ method: String, _ path: String, query: [String: String] = [:]) -> URLRequest {
@@ -211,6 +242,9 @@ struct LiveHubClient: HubClient {
     static func detail(from data: Data) -> String {
         if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let detail = object["detail"] {
+            if let nested = detail as? [String: Any], let message = nested["message"] as? String {
+                return message
+            }
             return "\(detail)"
         }
         return String(decoding: data.prefix(300), as: UTF8.self)

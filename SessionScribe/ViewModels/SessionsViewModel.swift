@@ -65,6 +65,9 @@ extension SessionSummary {
         case "transcribing": "Transcribing"
         case "staging": "Staging"
         case "ready": "Ready"
+        case "proposing": "Drafting changes"
+        case "review": "To review"
+        case "published": "Published"
         case "failed": "Failed"
         default: state.capitalized
         }

@@ -80,6 +80,33 @@ final class MockHubClient: HubClient, @unchecked Sendable {
     func revokeDevice(_ id: String) async throws {
         try record("revoke \(id)")
     }
+
+    var proposalsValue = ProposalList(batch: nil, proposals: [])
+    var decideError: HubError?
+    var publishError: HubError?
+    var publishValue = PublishResult(dryRun: true, commit: nil, pushed: false, files: [], applied: 0)
+
+    func proposals(session: Int) async throws -> ProposalList {
+        try record("proposals \(session)")
+        return proposalsValue
+    }
+
+    func decide(proposal id: Int, action: String, after: String?) async throws -> Proposal {
+        try record("decide \(id) \(action)" + (after.map { " after=\($0)" } ?? ""))
+        if let decideError { throw decideError }
+        guard let p = proposalsValue.proposals.first(where: { $0.id == id }) else { throw HubError.invalidResponse }
+        return p
+    }
+
+    func propose(session: Int) async throws {
+        try record("propose \(session)")
+    }
+
+    func publish(session: Int, dryRun: Bool) async throws -> PublishResult {
+        try record("publish \(session) dry=\(dryRun)")
+        if let publishError { throw publishError }
+        return publishValue
+    }
 }
 
 enum PreviewHub {

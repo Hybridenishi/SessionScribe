@@ -121,8 +121,19 @@ final class SessionDetailViewModel {
         }
     }
 
+    func propose() async {
+        await act { try await $0.propose(session: self.number) }
+    }
+
+    /// Transcript staged on a vault branch, and not already proposing or reviewed.
+    var canPropose: Bool {
+        guard let d = detail else { return false }
+        return d.manifest?.stage3?.branch != nil && ["ready", "failed", "blocked"].contains(d.state)
+    }
+
+    /// Redo from the upload: only for problems before the transcript was staged.
     var canRetry: Bool {
-        ["blocked", "failed"].contains(detail?.state ?? "")
+        ["blocked", "failed"].contains(detail?.state ?? "") && detail?.manifest?.stage3?.branch == nil
     }
 
     var canRetranscribe: Bool {
