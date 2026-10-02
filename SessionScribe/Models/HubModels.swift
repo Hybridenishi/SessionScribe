@@ -92,13 +92,22 @@ struct SessionDetail: Decodable, Equatable, Sendable {
     }
 
     struct Job: Decodable, Equatable, Identifiable, Sendable {
+        /// The Mac worker's last report for an S2 job: speech chunks done out of total, and when.
+        struct Progress: Decodable, Equatable, Sendable {
+            let done: Int
+            let total: Int
+            let at: Double
+        }
+
         let id: Int
         let stage: String
         let lane: String
         let state: String
         let attempts: Int
         let error: String?
+        let updatedAt: Double
         let track: Int?
+        let progress: Progress?
     }
 
     let number: Int

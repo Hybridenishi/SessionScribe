@@ -232,3 +232,91 @@ struct SettingsTests {
         #expect(vm.campaignMessage == "Saved.")
     }
 }
+
+@MainActor
+struct TranscriptionProgressTests {
+    private static let t0: Double = 1_790_000_000
+
+    private func job(_ id: Int, track: Int, state: String, updated: Double = t0,
+                     progress: SessionDetail.Job.Progress? = nil, error: String? = nil) -> SessionDetail.Job {
+        .init(id: id, stage: "s2", lane: "mac", state: state, attempts: 1, error: error,
+              updatedAt: updated, track: track, progress: progress)
+    }
+
+    private func viewModel(jobs: [SessionDetail.Job], nowOffset: Double) async -> SessionDetailViewModel {
+        let base = PreviewHub.detail
+        let tracks = (1 ... 5).map {
+            SessionDetail.Manifest.Track(index: $0, file: "\($0).flac", username: "u\($0)", discordId: nil,
+                                         speaker: .init(label: "P\($0)", role: "player", pc: nil), durationS: nil)
+        }
+        let detail = SessionDetail(number: 990, createdAt: Self.t0, state: "transcribing", detail: nil,
+                                   manifest: .init(craig: base.manifest!.craig, tracks: tracks, unmapped: [], stage3: nil),
+                                   jobs: jobs)
+        let mock = MockHubClient()
+        mock.sessionResult = .success(detail)
+        let fixedNow = Date(timeIntervalSince1970: Self.t0 + nowOffset)
+        let vm = SessionDetailViewModel(number: 990, connection: PreviewHub.connection(client: mock),
+                                        player: PreviewHub.Player(), now: { fixedNow })
+        await vm.refresh()
+        return vm
+    }
+
+    @Test func everyStateReadsPlainly() async {
+        let vm = await viewModel(jobs: [
+            job(1, track: 1, state: "done"),
+            job(2, track: 2, state: "running", progress: .init(done: 30, total: 120, at: Self.t0 + 50)),
+            job(3, track: 3, state: "running", progress: .init(done: 10, total: 100, at: Self.t0)),
+            job(4, track: 4, state: "queued"),
+            job(5, track: 5, state: "failed", error: "mlx crashed")
+        ], nowOffset: 60)
+        let t = Dictionary(uniqueKeysWithValues: vm.trackProgress.map { ($0.id, $0) })
+        #expect(t[1]?.fraction == 1 && t[1]?.text == "Done")
+        #expect(t[2]?.fraction == 0.25 && t[2]?.status == .inactive)
+        #expect(t[2]?.text == "25% · 30 of 120 chunks · updated 10 s ago")
+        #expect(t[3]?.status == .inactive)                       // 60 s old: still fine
+        #expect(t[4]?.text == "Waiting for the Mac worker")
+        #expect(t[5]?.status == .failed && t[5]?.text.contains("mlx crashed") == true)
+        #expect(t[2]?.speaker == "P2")
+    }
+
+    @Test func noReportForTwoMinutesIsFlaggedAsStuck() async {
+        let vm = await viewModel(jobs: [
+            job(1, track: 1, state: "running", progress: .init(done: 10, total: 100, at: Self.t0))
+        ], nowOffset: 300)
+        let track = vm.trackProgress[0]
+        #expect(track.status == .degraded)
+        #expect(track.text == "No progress for 5 min: is the Mac awake and on Tailscale?")
+        #expect(vm.stages.first { $0.id == "s2" }?.detail.contains("no recent progress") == true)
+        #expect(vm.stages.first { $0.id == "s2" }?.status == .degraded)
+    }
+
+    @Test func preparingGetsLongerBeforeItCountsAsStuck() async {
+        let fresh = await viewModel(jobs: [job(1, track: 1, state: "running", updated: Self.t0)], nowOffset: 300)
+        #expect(fresh.trackProgress[0].text == "Downloading and preparing audio…")
+        #expect(fresh.trackProgress[0].fraction == nil)
+        let stuck = await viewModel(jobs: [job(1, track: 1, state: "running", updated: Self.t0)], nowOffset: 900)
+        #expect(stuck.trackProgress[0].status == .degraded)
+    }
+
+    @Test func overallPercentAveragesTheTracks() async {
+        let vm = await viewModel(jobs: [
+            job(1, track: 1, state: "done"),
+            job(2, track: 2, state: "running", progress: .init(done: 50, total: 100, at: Self.t0)),
+            job(3, track: 3, state: "queued")
+        ], nowOffset: 5)
+        #expect(vm.stages.first { $0.id == "s2" }?.detail == "1 of 3 tracks done · 50% overall")
+    }
+
+    @Test func aReRunUsesTheNewestJobPerTrack() async {
+        let vm = await viewModel(jobs: [
+            job(1, track: 1, state: "done"),
+            job(7, track: 1, state: "queued")
+        ], nowOffset: 5)
+        #expect(vm.trackProgress.map(\.text) == ["Waiting for the Mac worker"])
+    }
+
+    @Test func progressDecodesFromARealHubResponse() throws {
+        let d = try LiveHubClient.decoder.decode(SessionDetail.self, from: Data(HubFixtures.sessionReady.utf8))
+        #expect(d.jobs.contains { $0.progress?.done == 1 && $0.progress?.total == 1 })
+    }
+}

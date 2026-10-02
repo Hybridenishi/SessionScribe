@@ -25,6 +25,7 @@ from . import transcribe as tx
 log = logging.getLogger("scribe_worker")
 POLL_S = 20
 HEARTBEAT_S = 300
+PROGRESS_S = 15          # how often to report chunk progress for the app's progress bar
 
 
 class Hub:
@@ -49,8 +50,9 @@ class Hub:
         with self._req("GET", f"/worker/jobs/{job}/audio", timeout=600) as r, open(dest, "wb") as f:
             shutil.copyfileobj(r, f, 1024 * 1024)
 
-    def heartbeat(self, job: int) -> None:
-        with self._req("POST", f"/worker/jobs/{job}/heartbeat"):
+    def heartbeat(self, job: int, done: int | None = None, total: int | None = None) -> None:
+        body = {"done": done, "total": total} if done is not None and total is not None else None
+        with self._req("POST", f"/worker/jobs/{job}/heartbeat", body):
             pass
 
     def result(self, job: int, utterances: list[dict], engine: dict) -> None:
@@ -61,6 +63,24 @@ class Hub:
     def fail(self, job: int, error: str) -> None:
         with self._req("POST", f"/worker/jobs/{job}/fail", {"error": error[:1900]}):
             pass
+
+
+def _progress_reporter(hub: Hub, jid: int, every_s: float = PROGRESS_S, clock=time.monotonic):
+    """on_progress callback: report at most every `every_s`, always the first and the last.
+    A failed report is logged and skipped; it must never stop the transcription."""
+    last = [float("-inf")]
+
+    def report(done: int, total: int) -> None:
+        t = clock()
+        if done not in (0, total) and t - last[0] < every_s:
+            return
+        last[0] = t
+        try:
+            hub.heartbeat(jid, done, total)
+        except (urllib.error.URLError, OSError) as exc:
+            log.warning("progress report for job %s failed: %s", jid, exc)
+
+    return report
 
 
 def run_job(hub: Hub, job: dict, recognize: tx.Recognizer, workdir: Path) -> dict:
@@ -84,7 +104,10 @@ def run_job(hub: Hub, job: dict, recognize: tx.Recognizer, workdir: Path) -> dic
         pcm = tx.load_pcm(str(wav))
         regions = tx.speech_regions(str(wav), len(pcm) / tx.SR)
         started = time.time()
-        utts, stats = tx.transcribe(pcm, regions, job.get("prompt") or None, recognize)
+        report = _progress_reporter(hub, jid)
+        report(0, len(tx.pack(regions)))          # "started": the app stops showing "waiting"
+        utts, stats = tx.transcribe(pcm, regions, job.get("prompt") or None, recognize,
+                                    on_progress=report)
         engine = {"engine": "whisper-large-v3-turbo-mlx", "recipe": "addendum-1",
                   "chunks": stats.chunks, "speech_s": stats.speech_s,
                   "loops_retried": stats.loops_retried, "loops_dropped": stats.loops_dropped,

@@ -3,7 +3,7 @@
 enum HubFixtures {
     static let pair = #"""
 {
-  "device_id": "600ea29d",
+  "device_id": "7c1f9db3",
   "device_name": "Fixture Mac",
   "token": "REDACTED-FIXTURE-TOKEN"
 }
@@ -28,27 +28,27 @@ enum HubFixtures {
     }
   },
   "mac_worker": {
-    "last_seen": 1790874866.148905,
+    "last_seen": 1790906967.3756878,
     "name": "mac-worker"
   },
   "sessions": {
     "blocked": 1,
     "recent": [
       {
-        "created_at": 1790874866.4422379,
+        "created_at": 1790906967.540237,
         "detail": "Add to campaign.yaml, then retry: stranger (999)",
         "number": 61,
         "state": "blocked"
       },
       {
-        "created_at": 1790874865.9500449,
+        "created_at": 1790906967.3082938,
         "detail": null,
         "number": 60,
         "state": "ready"
       }
     ]
   },
-  "time": 1790874866.489602,
+  "time": 1790906967.568532,
   "vault": {
     "configured": true,
     "push_branches": false
@@ -60,13 +60,13 @@ enum HubFixtures {
 {
   "sessions": [
     {
-      "created_at": 1790874866.4422379,
+      "created_at": 1790906967.540237,
       "detail": "Add to campaign.yaml, then retry: stranger (999)",
       "number": 61,
       "state": "blocked"
     },
     {
-      "created_at": 1790874865.9500449,
+      "created_at": 1790906967.3082938,
       "detail": null,
       "number": 60,
       "state": "ready"
@@ -77,7 +77,7 @@ enum HubFixtures {
 
     static let sessionReady = #"""
 {
-  "created_at": 1790874865.9500449,
+  "created_at": 1790906967.3082938,
   "detail": null,
   "jobs": [
     {
@@ -85,40 +85,52 @@ enum HubFixtures {
       "error": null,
       "id": 1,
       "lane": "hub",
+      "progress": null,
       "stage": "s1",
       "state": "done",
       "track": null,
-      "updated_at": 1790874866.1250508
+      "updated_at": 1790906967.361907
     },
     {
       "attempts": 1,
       "error": null,
       "id": 2,
       "lane": "mac",
+      "progress": {
+        "at": 1790906967.368444,
+        "done": 1,
+        "total": 1
+      },
       "stage": "s2",
       "state": "done",
       "track": 1,
-      "updated_at": 1790874866.138325
+      "updated_at": 1790906967.370047
     },
     {
       "attempts": 1,
       "error": null,
       "id": 3,
       "lane": "mac",
+      "progress": {
+        "at": 1790906967.373513,
+        "done": 1,
+        "total": 1
+      },
       "stage": "s2",
       "state": "done",
       "track": 2,
-      "updated_at": 1790874866.1453319
+      "updated_at": 1790906967.374741
     },
     {
       "attempts": 1,
       "error": null,
       "id": 4,
       "lane": "hub",
+      "progress": null,
       "stage": "s3",
       "state": "done",
       "track": null,
-      "updated_at": 1790874866.437299
+      "updated_at": 1790906967.5350342
     }
   ],
   "manifest": {
@@ -126,12 +138,12 @@ enum HubFixtures {
       "recording_id": "TESTREC",
       "start_time": "2026-10-01T00:00:00.000Z"
     },
-    "created_at": 1790874866.124361,
+    "created_at": 1790906967.36129,
     "session": 60,
     "stage3": {
-      "at": 1790874866.436314,
+      "at": 1790906967.534225,
       "branch": "scribe/session-060",
-      "commit": "4b4a17a0d1aca457aa105319427281b76d77ea0c",
+      "commit": "c1ea4712379394b67c74ed959c731a70349e87ec",
       "pushed": false,
       "utterances": 2
     },
@@ -170,7 +182,7 @@ enum HubFixtures {
 
     static let sessionBlocked = #"""
 {
-  "created_at": 1790874866.4422379,
+  "created_at": 1790906967.540237,
   "detail": "Add to campaign.yaml, then retry: stranger (999)",
   "jobs": [
     {
@@ -178,10 +190,11 @@ enum HubFixtures {
       "error": "unmapped speaker(s): stranger (999)",
       "id": 5,
       "lane": "hub",
+      "progress": null,
       "stage": "s1",
       "state": "blocked",
       "track": null,
-      "updated_at": 1790874866.4856389
+      "updated_at": 1790906967.566498
     }
   ],
   "manifest": {
@@ -189,7 +202,7 @@ enum HubFixtures {
       "recording_id": "TESTREC",
       "start_time": "2026-10-01T00:00:00.000Z"
     },
-    "created_at": 1790874866.484996,
+    "created_at": 1790906967.566175,
     "session": 61,
     "stage3": null,
     "tracks": [
@@ -273,17 +286,17 @@ enum HubFixtures {
 {
   "devices": [
     {
-      "created_at": 1790874865.937695,
-      "id": "600ea29d",
-      "last_seen": 1790874866.506568,
+      "created_at": 1790906967.3024378,
+      "id": "7c1f9db3",
+      "last_seen": 1790906967.575691,
       "name": "Fixture Mac",
       "revoked_at": null,
       "scope": "app"
     },
     {
-      "created_at": 1790874865.940313,
-      "id": "753da96d",
-      "last_seen": 1790874866.148426,
+      "created_at": 1790906967.303444,
+      "id": "406c5b14",
+      "last_seen": 1790906967.3755698,
       "name": "mac-worker",
       "revoked_at": null,
       "scope": "worker"

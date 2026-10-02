@@ -52,10 +52,18 @@ def claim(db: Database, lane: str, lease_s: float | None = None) -> dict | None:
     return get(db, row["id"])
 
 
-def extend(db: Database, job_id: int, lease_s: float) -> bool:
-    cur = db.execute("UPDATE jobs SET lease_until = ?, updated_at = ? "
-                     "WHERE id = ? AND state = 'running'", (now() + lease_s, now(), job_id))
-    return bool(cur.rowcount)
+def extend(db: Database, job_id: int, lease_s: float, progress: dict | None = None) -> bool:
+    """Renew a running job's lease; optionally record the worker's progress report."""
+    with db.transaction():
+        job = get(db, job_id)
+        if job is None or job["state"] != "running":
+            return False
+        payload = job["payload"]
+        if progress is not None:
+            payload["progress"] = {**progress, "at": now()}
+        db.execute("UPDATE jobs SET lease_until = ?, updated_at = ?, payload = ? WHERE id = ?",
+                   (now() + lease_s, now(), json.dumps(payload), job_id))
+    return True
 
 
 def finish(db: Database, job_id: int, payload_update: dict | None = None) -> None:

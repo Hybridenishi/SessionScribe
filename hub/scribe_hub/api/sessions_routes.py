@@ -49,7 +49,7 @@ def get_session(n: int, request: Request, _=auth.require_app):
     db = request.app.state.db
     s = _session(db, n)
     jobs = [{k: j[k] for k in ("id", "stage", "lane", "state", "attempts", "error", "updated_at")}
-            | {"track": j["payload"].get("track")}
+            | {"track": j["payload"].get("track"), "progress": j["payload"].get("progress")}
             for j in queue.for_session(db, n)]
     return {**s, "manifest": archive.read_manifest(request.app.state.settings.archive_dir, n),
             "jobs": jobs}

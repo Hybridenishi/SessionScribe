@@ -181,3 +181,32 @@ def test_audio_clip_plays_a_cited_moment(client, hub, app_headers):
     assert r.content[:4] == b"RIFF" and 15000 < len(r.content) < 17000   # ~0.5 s at 16 kHz
     assert client.get("/sessions/60/audio/9?from=0&to=10", headers=app_headers).status_code == 404
     assert client.get("/sessions/60/audio/1?from=50&to=10", headers=app_headers).status_code == 422
+
+
+def test_worker_progress_reaches_the_session_detail(client, hub, app_headers, worker_headers):
+    upload(client, app_headers)
+    drain(hub)
+    job = client.post("/worker/claim", headers=worker_headers).json()
+    url = f"/worker/jobs/{job['job']}/heartbeat"
+    def beat(body=None):
+        return client.post(url, headers=worker_headers, json=body).status_code
+
+    assert beat() == 200                                  # bare heartbeat: lease only
+    assert beat({"done": 7, "total": 5}) == 422
+    assert beat({"done": 3, "total": 12}) == 200
+    jobs = client.get("/sessions/60", headers=app_headers).json()["jobs"]
+    mine = next(j for j in jobs if j["id"] == job["job"])
+    assert mine["progress"]["done"] == 3 and mine["progress"]["total"] == 12
+    assert mine["progress"]["at"] >= mine["updated_at"] - 1
+    other = next(j for j in jobs if j["stage"] == "s2" and j["id"] != job["job"])
+    assert other["progress"] is None                                          # not started yet
+
+
+def test_progress_for_a_cancelled_job_is_refused(client, hub, app_headers, worker_headers):
+    upload(client, app_headers)
+    drain(hub)
+    job = client.post("/worker/claim", headers=worker_headers).json()
+    queue.cancel_open(hub.db, 60, "s2")
+    r = client.post(f"/worker/jobs/{job['job']}/heartbeat", headers=worker_headers,
+                    json={"done": 1, "total": 2})
+    assert r.status_code == 409
