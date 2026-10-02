@@ -65,7 +65,9 @@ Copy `compose.example.yaml` to `/mnt/user/appdata/scribe-hub/compose.yaml` and f
 cd /mnt/user/appdata/scribe-hub && docker compose up -d && docker compose ps
 ```
 
-- [ ] `scribe-hub` is `healthy` within a minute.
+- [ ] `scribe-hub` is `healthy` within a minute. If it stays `starting`/`unhealthy` and the log says
+      "main listener refused a connection from 127.0.0.1", `SCRIBE_MAIN_ALLOWED_CIDRS` is missing
+      `127.0.0.1/32` (the image's own health check).
 - [ ] `curl -s http://127.0.0.1:8780/healthz` → `{"ok":true}`.
 
 ## 6. Check the network walls (Futaba) — do not skip
@@ -73,7 +75,8 @@ cd /mnt/user/appdata/scribe-hub && docker compose up -d && docker compose ps
 The main API only accepts connections from the `azora` network, and the GPU queue only from
 `azora-iris`. This depends on how Docker forwards the published port, so prove it:
 
-- [ ] From the host: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8780/healthz` → `200`.
+- [ ] From the host: `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8780/healthz` → `200`
+      (it arrives from the `azora` gateway, 172.30.10.1, on the first deploy it did).
       If it's `403`, read the refused source IP in `docker logs scribe-hub`
       ("main listener refused a connection from …"), add that IP's /32 to
       `SCRIBE_MAIN_ALLOWED_CIDRS`, recreate, and report what it was.
