@@ -5,8 +5,9 @@ a credential he must see or approve; **Futaba** does the server work. Stop and r
 fails; don't improvise around it.
 
 Ground rules: no secret value goes into a repo, a log, a chat or an audit post (fingerprints and
-present/absent only). The hub must never push to or merge into `main` of either vault. One naota
-GPU job at a time.
+present/absent only). The hub never pushes to or merges into `main` of either vault, with one
+exception: H2 **Publish** (step 12), which pushes the DM's accepted cards to Azora-Dm `main`
+(fast-forward only) when Nate presses it. One naota GPU job at a time.
 
 ## 0. Before you start — check, change nothing
 
