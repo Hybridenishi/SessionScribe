@@ -412,3 +412,37 @@ def test_a_refused_push_reads_plainly_and_keeps_the_cards(review, headers):
     assert [p["state"] for p in cards(client, headers)["proposals"]] == ["accepted"]
     hook.unlink()
     assert client.post("/sessions/60/publish", headers=headers, json={}).json()["pushed"]
+
+
+def test_publish_stops_when_two_accepted_cards_edit_the_same_text(review, headers):
+    hub, client, spec, origin, clone = review
+    hub.settings = replace(hub.settings, push_branches=True)
+    run_to_review(hub, client, headers, headers, spec, {"proposals": {
+        "schema": 1, "session": 60, "proposals": [
+            GOOD[0],
+            P("p-060-010", "update-section", "Characters/PCs/Pat-Alpha.md", section="Appearance",
+              after="Tall, and limping."),                       # same section as p-060-001
+            GOOD[1],
+            P("p-060-012", "add-to-list", "Characters/PCs/Pat-Alpha.md", section="Relationships",
+              after="- Fears the river."),                       # two list items: both fine
+            GOOD[2],
+            P("p-060-013", "set-frontmatter", "Characters/PCs/Pat-Alpha.md", key="status",
+              after="dead"),                                      # same key as p-060-003
+            P("p-060-011", "update-section", "Characters/PCs/Pat-Alpha.md", section="Pat Alpha",
+              after="## Relationships\n\nNone.\n"),               # encloses every section
+        ]}})
+    accept_all_good(client, headers)
+    nates = git(origin, "rev-parse", "main").strip()
+    r = client.post("/sessions/60/publish", headers=headers, json={})
+    assert r.status_code == 409
+    clashes = {c["proposal_id"]: c["reason"] for c in r.json()["detail"]["conflicts"]}
+    assert set(clashes) == {"p-060-010", "p-060-011", "p-060-013"}
+    assert "overlaps p-060-001" in clashes["p-060-010"]
+    assert git(origin, "rev-parse", "main").strip() == nates          # nothing pushed
+    by = {p["proposal_id"]: p for p in cards(client, headers)["proposals"]}
+    for pid in clashes:
+        assert by[pid]["state"] == "pending" and "overlaps" in by[pid]["check_error"]
+    r = client.post("/sessions/60/publish", headers=headers, json={}).json()
+    assert r["pushed"] and r["applied"] == 4
+    npc = git(origin, "show", "main:Characters/PCs/Pat-Alpha.md")
+    assert "- Owes the gatekeeper a favor.\n- Fears the river." in npc

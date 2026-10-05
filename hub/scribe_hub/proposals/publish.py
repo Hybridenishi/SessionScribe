@@ -54,6 +54,36 @@ def current_before(vault, p: dict) -> str:
     return md.section_body(text, p["section"])
 
 
+def overlapping(vault, accepted: list[dict], skip: set) -> list[dict]:
+    """Accepted cards that would overwrite each other. Each is checked against the vault on its
+    own, so a second `update-section` of the same (or an enclosing) section would silently undo
+    the first, and two values for one frontmatter key would leave only the last. The later card
+    is the conflict; the DM accepts one or merges them by editing."""
+    out, spans, keys = [], {}, {}
+    for p in accepted:
+        if p["id"] in skip:
+            continue
+        clash = None
+        if p["op"] == "set-frontmatter":
+            clash = keys.get((p["target"], p["key"]))
+            keys.setdefault((p["target"], p["key"]), p)
+        elif p["op"] in ("update-section", "add-to-list"):
+            text = safe_path(vault, p["target"]).read_text(encoding="utf-8")
+            a, b = md.find_section(text, p["section"])
+            span = (a - 1, b)                       # heading line through end of body
+            for other, (oa, ob) in spans.get(p["target"], []):
+                both_lists = p["op"] == other["op"] == "add-to-list"
+                if not both_lists and span[0] < ob and oa < span[1]:
+                    clash = other
+                    break
+            spans.setdefault(p["target"], []).append((p, span))
+        if clash:
+            out.append({"id": p["id"], "proposal_id": p["proposal_id"],
+                        "reason": f"{p['target']}: overlaps {clash['proposal_id']}, which edits "
+                                  "the same text; accept one of them, or merge them by editing"})
+    return out
+
+
 def apply_one(vault, p: dict) -> list[str]:
     """Apply one proposal to the working tree. Returns the paths it touched."""
     after = p.get("edited_after") if p.get("edited_after") is not None else p.get("after")
@@ -162,6 +192,7 @@ def publish(repo, session: int, accepted: list[dict], author: str, *, push: bool
                     conflicts.append({"id": p["id"], "proposal_id": p["proposal_id"],
                                       "reason": f"{p['target']} changed since this was proposed",
                                       "current": now})
+            conflicts += overlapping(repo, accepted, {c["id"] for c in conflicts})
             if conflicts:
                 raise PublishConflict(conflicts)
             files = list(inbox)
